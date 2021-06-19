@@ -208,27 +208,6 @@ begin
 end
 
 
-lemma nipkow_lemma_2 {f : (ι → σ → σ → Prop) → (σ → σ → Prop)}
-    (hf : is_arrovian f X N)
-    (hX : finset.card X ≥ 3) 
-    (hN : finset.card N ≥ 2) :
-    ∀ b ∈ X, (∃ Rᵢ : (ι → σ → σ → Prop), 
-    ∀ i ∈ N, is_extremal (Rᵢ i) X b) → 
-    ∃ (n' ∈ N) (R₁ R₂ : ι → σ → σ → Prop),
-    ( ∀ i ∈ N, i ≠ n' → ∀ x y ∈ X, same_order (R₁ i) (R₂ i) x y x y) ∧ 
-    ( ∀ i ∈ N, ∀ i ∈ N, is_extremal (R₁ i) X b ) ∧ 
-    ( ∀ i ∈ N, ∀ i ∈ N, is_extremal (R₂ i) X b ) ∧
-    ( ∀ a ∈ X, a ≠ b → P (R₁ n') a b  ) ∧
-    ( ∀ a ∈ X, a ≠ b → P (R₂ n') b a  ) ∧
-    ( ∀ a ∈ X, a ≠ b → P (f R₁) a b  ) ∧
-    ( ∀ a ∈ X, a ≠ b → P (f R₂) b a  ) := 
-begin
-    intros b b_in hRᵢ,
-    cases hRᵢ with Rᵢ hRᵢ,
-    sorry,
-end
-
-
 def is_pivotal  (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (N : finset ι) (X : finset σ) 
     (n : ι) (b : σ) : Prop := 
     ∃ (R₁ R₂ : ι → σ → σ → Prop),

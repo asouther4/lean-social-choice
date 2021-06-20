@@ -8,7 +8,7 @@ open relation vector finset
 variables {σ ι : Type} [decidable_eq σ] [decidable_eq ι]
 
 variables {x y x' y' a b : σ} -- social states
-					{R R' : σ → σ → Prop} --relations between social states (Andrew did I get this right?)
+          {R R' : σ → σ → Prop} --relations between social states (Andrew did I get this right?)
 
 ----------------------------------------------
 --Some Basic Definitions and Lemmas
@@ -23,8 +23,8 @@ def P (R  : σ → σ → Prop) (x y : σ) : Prop := R x y ∧ ¬ R y x
 
 lemma R_of_nP_total (hR: total R) (h : ¬ P R y x) : R x y :=
 begin
-	unfold P at h, 
-	specialize hR x y,
+  unfold P at h,
+  specialize hR x y,
 	push_neg at h,
 	by_cases hyp : R y x, exact h hyp,
 	rw or_iff_not_imp_right at hR, exact hR hyp,

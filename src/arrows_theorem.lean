@@ -75,7 +75,7 @@ variables {f : (ι → σ → σ → Prop) → (σ → σ → Prop)} -- our "ele
 def unrestricted_domain (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) : Prop := 
 (∀ (m : ℕ) (n : fin (m+1)) (V : vector (finset ι) n) (T : vector (vector σ m) n),
   ∃ Rᵢ : ι → (σ → σ → Prop), ∀ (i : ι) (j : fin n) (k k': fin m), i ∈ nth V j → k > k' →
-    P (Rᵢ i) (nth (nth T j) k) (nth (nth T j) k') )
+    P (Rᵢ i) (nth (nth T j) k) (nth (nth T j) k'))
 
 def weak_pareto (f : (ι → σ → σ → Prop) → σ → σ → Prop) (X : finset σ) (N : finset ι) : Prop := 
 ∀ (x y ∈ X) (Rᵢ : ι → (σ → σ → Prop)), (∀i ∈ N,  P (Rᵢ i) x y) → P (f Rᵢ) x y
@@ -87,7 +87,7 @@ def ind_of_irr_alts (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (
 def is_arrovian (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (X : finset σ) (N : finset ι) : Prop :=
 unrestricted_domain f ∧ weak_pareto f X N ∧ ind_of_irr_alts f X N ∧ ∀ (Rᵢ : (ι → σ → σ → Prop)), is_pref_ordering (f Rᵢ)
 
-def is_dictatorship (f : (ι → σ → σ → Prop) → (σ → σ → Prop) ) (X : finset σ) (N : finset ι) : Prop :=
+def is_dictatorship (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (X : finset σ) (N : finset ι) : Prop :=
 ∃ i ∈ N, ∀ (x y ∈ X) (Rᵢ : ι → (σ → σ → Prop)), P (Rᵢ i) x y → P (f Rᵢ) x y
 
 
@@ -97,7 +97,7 @@ def is_dictatorship (f : (ι → σ → σ → Prop) → (σ → σ → Prop) ) 
 --If every individual in society places a social state at the top or bottom of their social preferences,
 --then society must place that social state at the top or bottom of its social preference. 
 -------------------------------------------
-lemma first_step (hf : is_arrovian f X N) (hX : card X ≥ 3) (b : σ) (b_in : b ∈ X ) (R : (ι → σ → σ → Prop))
+lemma first_step (hf : is_arrovian f X N) (hX : 3 ≤ card X) (b : σ) (b_in : b ∈ X) (R : (ι → σ → σ → Prop))
   (hyp : ∀ i ∈ N, is_extremal (R i) X b) :
   is_extremal (f R) X b :=
 begin
@@ -172,7 +172,7 @@ def is_pivotal (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (N : f
       (∀ a ∈ X, a ≠ b → P (R₁ n) a b) ∧ (∀ a ∈ X, a ≠ b → P (R₂ n) b a) ∧
         (∀ a ∈ X, a ≠ b → P (f R₁) a b) ∧ (∀ a ∈ X, a ≠ b → P (f R₂) b a)
 
-lemma second_step (hf : is_arrovian f X N) (hX : card X ≥ 3) (hN : card N ≥ 2) :
+lemma second_step (hf : is_arrovian f X N) (hX : 3 ≤ card X) (hN : 2 ≤ card N) :
   ∀ b ∈ X, ∃ n' ∈ N, is_pivotal f N X n' b := 
 begin
   sorry,
@@ -181,14 +181,14 @@ end
 def is_dictator_except (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (N : finset ι) (X : finset σ) (n : ι) (b : σ) : Prop := 
 ∀ a ∈ X, ∀ c ∈ X, a ≠ b → c ≠ b → ∀ Rᵢ : ι → σ → σ → Prop, P (Rᵢ n) c a → P (f Rᵢ) c a
 
-lemma third_step (hf : is_arrovian f X N) (hX : card X ≥ 3) (hN : card N ≥ 2) :
+lemma third_step (hf : is_arrovian f X N) (hX : 3 ≤ card X) (hN : 2 ≤ card N) :
   ∀ b ∈ X, ∀ n' ∈ N, is_pivotal f N X n' b → is_dictator_except f N X n' b :=
 begin
   sorry,
 end
 
 
-lemma third_distinct_mem (hX : card X ≥ 3)(a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
+lemma third_distinct_mem (hX : 3 ≤ card X) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
   ∃ c ∈ X, c ≠ a ∧ c ≠ b :=
 begin
   have h₁ := card_erase_of_mem b_in,
@@ -210,7 +210,7 @@ begin
 end
 
 
-lemma fourth_step (hf : is_arrovian f X N) (hX : card X ≥ 3) (hN : card N ≥ 2)
+lemma fourth_step (hf : is_arrovian f X N) (hX : 3 ≤ card X) (hN : 2 ≤ card N)
   (h : ∀ b ∈ X, ∃ (n' ∈ N), is_pivotal f N X n' b) : 
   is_dictatorship f X N := 
 begin
@@ -262,6 +262,6 @@ begin
 end
 
 
-lemma arrows_theorem (hf : is_arrovian f X N) (hX : card X ≥ 3) (hN : card N ≥ 2):
+lemma arrows_theorem (hf : is_arrovian f X N) (hX : 3 ≤ card X) (hN : 2 ≤ card N):
   is_dictatorship f X N := 
 fourth_step hf hX hN $ second_step hf hX hN

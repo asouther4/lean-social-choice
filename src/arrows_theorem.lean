@@ -19,58 +19,33 @@ def is_pref_ordering (R : σ → σ → Prop) : Prop :=
 reflexive R ∧ total R ∧ transitive R
 
 --now, we have to define the 'strict' preference relation P
-def P (R  : σ → σ → Prop) (x y : σ) : Prop := R x y ∧ ¬ R y x
+def P (R : σ → σ → Prop) (x y : σ) : Prop := R x y ∧ ¬ R y x -- accepts a relation and two social states
 
 lemma R_of_nP_total (hR: total R) (h : ¬ P R y x) : R x y :=
 begin
-  unfold P at h,
-  specialize hR x y,
-  push_neg at h,
-  by_cases hyp : R y x, exact h hyp,
-  rw or_iff_not_imp_right at hR, exact hR hyp,
+  by_cases hyp : R y x,
+  exacts [not_and_not_right.mp h hyp, or_iff_not_imp_right.mp (hR x y) hyp],
 end
 
 lemma nP_of_reverseP (h : P R x y) : ¬ P R y x :=
-begin
-  unfold P, push_neg,
-  intro n, 
-  exact h.1,
-end 
+not_and_not_right.mpr $ λ n, h.1
 
 lemma false_of_P_self (h : P R x x) : false := 
-by simpa only [P, and_not_self] using h
+(and_not_self _).mp h
 
 
 --what it means for social states to have the "same order" with respect to two relations
 def same_order (R R' : σ → σ → Prop) (x y x' y' : σ) : Prop :=
 ((R x y ↔ R' x' y') ∧ (R y x ↔ R' y' x')) ∧ (P R x y ↔ P R' x' y') ∧ (P R y x ↔ P R' y' x')
 
-
 lemma same_order_of_P_P' (hR : P R x y) (hR' : P R' x y) : same_order R R' x y x y := 
-begin
-  split, split,
-  exact ⟨(λ h, hR'.1), (λ h, hR.1)⟩,
-  split,
-  intro h, exfalso, exact hR.2 h,
-  intro h, exfalso, exact hR'.2 h,
-  split,
-  exact ⟨ (λ h, hR'), (λ h, hR)⟩,
-  split,
-  intro h, exfalso, exact (nP_of_reverseP hR) h,
-  intro h, exfalso, exact (nP_of_reverseP hR') h,
-end
+⟨⟨⟨λ h, hR'.1, λ h, hR.1⟩, ⟨hR.2.elim, hR'.2.elim⟩⟩, 
+  ⟨⟨λ h, hR', λ h, hR⟩, ⟨(nP_of_reverseP hR).elim, (nP_of_reverseP hR').elim⟩⟩⟩
 
-lemma same_order_of_reverseP_P' (hR : P R y x) (hR' : P R' y x) : same_order R R' x y x y := 
-begin
-  split, split, split,
-  intro h, exfalso, exact hR.2 h,
-  intro h, exfalso, exact hR'.2 h,
-  exact ⟨(λ h, hR'.1), (λ h, hR.1)⟩,
-  split, split,
-  intro h, exfalso, exact (nP_of_reverseP hR) h,
-  intro h, exfalso, exact (nP_of_reverseP hR') h,
-  exact ⟨(λ h, hR'), (λ h, hR)⟩,
-end
+lemma same_order_of_reverseP_P' (hR : P R y x) (hR' : P R' y x) : same_order R R' x y x y :=
+⟨⟨⟨hR.2.elim, hR'.2.elim⟩, ⟨λ h, hR'.1, λ h, hR.1⟩⟩, 
+  ⟨⟨(nP_of_reverseP hR).elim, (nP_of_reverseP hR').elim⟩, ⟨λ h, hR', λ h, hR⟩⟩⟩
+
 
 
 /- a social state is extremal with respect to a relation and a set of individuals
@@ -91,12 +66,12 @@ A choice function is a mapping from an individual preference to a preference.
 That is, a choice function has this type: 
 (ι → σ → σ → Prop) → (σ → σ → Prop)
 -/
-variables {f : (ι → σ → σ → Prop) → (σ → σ → Prop)} -- our "election process"
+variables {f : (ι → σ → σ → Prop) → (σ → σ → Prop)} -- our "election process" (see above)
           {Rᵢ : ι → (σ → σ → Prop)} --so I think of this as a function which accepts an individual and outputs a relation R but I'm not sure how to describe it using the proper vocablary - Ben
           {X : finset σ} --a finite set of social states
           {N : finset ι} --a finite set of individuals
 
----TODO: not sure if I've defined this one right
+---TODO: not sure if I've defined this one right - Andrew
 def unrestricted_domain (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) : Prop := 
 (∀ (m : ℕ) (n : fin (m+1)) (V : vector (finset ι) n) (T : vector (vector σ m) n),
   ∃ Rᵢ : ι → (σ → σ → Prop), ∀ (i : ι) (j : fin n) (k k': fin m), i ∈ nth V j → k > k' →
@@ -279,7 +254,7 @@ begin
       exfalso,
       exact false_of_P_self hyp },
     { rw ← hx at *, rw ← ne.def at hy,
-    exact (this y y_in hy Rᵢ).2 hyp } },
+      exact (this y y_in hy Rᵢ).2 hyp } },
   { by_cases hy : y = b,
     { rw ← ne.def at hx, rw ← hy at *,
       exact (this x x_in hx Rᵢ).1 hyp },

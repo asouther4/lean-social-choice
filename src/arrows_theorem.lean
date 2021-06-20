@@ -67,7 +67,7 @@ That is, a choice function has this type:
 (ι → σ → σ → Prop) → (σ → σ → Prop)
 -/
 variables {f : (ι → σ → σ → Prop) → (σ → σ → Prop)} -- our "election process" (see above)
-          {Rᵢ : ι → (σ → σ → Prop)} --so I think of this as a function which accepts an individual and outputs a relation R but I'm not sure how to describe it using the proper vocablary - Ben
+          {Rᵢ : ι → (σ → σ → Prop)} --so I think of this as a function which accepts an individual and outputs a relation R but I'm not sure how to describe it using the proper vocabulary - Ben
           {X : finset σ} --a finite set of social states
           {N : finset ι} --a finite set of individuals
 
@@ -156,13 +156,13 @@ begin
 end
 
 lemma vector_of_finset {α : Type} {n : ℕ} (S : finset α) (h : card S = n) :
-  ∃ v : vector α n, ∀ a ∈ S, ∃ k : fin n, vector.nth v k = a :=
+  ∃ v : vector α n, ∀ a ∈ S, ∃ k : fin n, nth v k = a :=
 begin
-  rcases S with ⟨⟨l⟩, (hl : l.nodup)⟩,
+  rcases S with ⟨⟨l⟩, hl : l.nodup⟩,
   change l.length = n at h,
   refine ⟨⟨l, h⟩, λ a ha, _⟩,
   rcases list.nth_le_of_mem ha with ⟨k, hk, e⟩,
-  refine ⟨⟨k, by rwa ← h⟩, e⟩,
+  exact ⟨⟨k, by rwa ← h⟩, e⟩,
 end
 
 def is_pivotal (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (N : finset ι) (X : finset σ) (n : ι) (b : σ) : Prop := 
@@ -191,22 +191,12 @@ end
 lemma third_distinct_mem (hX : 3 ≤ card X) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
   ∃ c ∈ X, c ≠ a ∧ c ≠ b :=
 begin
-  have h₁ := card_erase_of_mem b_in,
-  have h₂ := mem_erase_of_ne_of_mem h a_in,
-  have h₃ := card_erase_of_mem h₂,
-  rw h₁ at h₃,
-  have h₄ := nat.pred_le_pred hX,
-  simp at h₄,
-  have h₅ := nat.pred_le_pred h₄,
-  rw ← h₃ at h₅,
-  simp at h₅,
-  have h₆ : 0 < ((X.erase b).erase a).card := by linarith,
-  rw card_pos at h₆,
-  cases h₆ with c hc,
-  simp only [mem_erase, ne.def] at hc,
-  use c,
-  rw [← ne.def, ← ne.def] at hc,
-  exact ⟨hc.2.2, hc.1, hc.2.1⟩,
+  have hpos : 0 < ((X.erase b).erase a).card,
+  { simpa only [card_erase_of_mem, mem_erase_of_ne_of_mem h a_in, b_in, nat.pred_succ] 
+      using nat.pred_le_pred (nat.pred_le_pred hX) }, 
+  cases card_pos.mp hpos with c hc,
+  simp_rw mem_erase at hc,
+  exact ⟨c, hc.2.2, hc.1, hc.2.1⟩,
 end
 
 
@@ -222,7 +212,7 @@ begin
   have : ∀ a ∈ X, a ≠ b → ∀ Rᵢ : (ι → σ → σ → Prop), 
           (P (Rᵢ i) a b → P (f Rᵢ) a b) ∧ (P (Rᵢ i) b a → P (f Rᵢ) b a),
   { intros a a_in ha Rᵢ,
-    obtain ⟨c, c_in, not_a, not_b⟩ : ∃ c ∈ X, c ≠ a ∧ c ≠ b := third_distinct_mem hX a_in b_in ha,
+    obtain ⟨c, c_in, not_a, not_b⟩ := third_distinct_mem hX a_in b_in ha,
     obtain ⟨j, j_in, j_piv⟩ := h c c_in,
     have j_dict := third_step hf hX hN c c_in j j_in j_piv, 
     have hij : i = j,
@@ -246,8 +236,7 @@ begin
       exact j_dict b b_in a a_in (ne_comm.1 not_b) (ne_comm.1 not_a) Rᵢ },
     { rw hij,
       exact j_dict a a_in b b_in (ne_comm.1 not_a) (ne_comm.1 not_b) Rᵢ } },
-  use i, split, exact i_in,
-  intros x y x_in y_in Rᵢ hyp,
+  refine ⟨i, i_in, λ x y x_in y_in Rᵢ hyp, _⟩,
   by_cases hx : x = b,
   { by_cases hy : y = b,
     { rw [hx,hy] at hyp,
@@ -256,7 +245,7 @@ begin
     { rw ← hx at *, rw ← ne.def at hy,
       exact (this y y_in hy Rᵢ).2 hyp } },
   { by_cases hy : y = b,
-    { rw ← ne.def at hx, rw ← hy at *,
+    { rw ← ne at hx, rw ← hy at *,
       exact (this x x_in hx Rᵢ).1 hyp },
     { exact i_dict y y_in x x_in hy hx Rᵢ hyp } },
 end

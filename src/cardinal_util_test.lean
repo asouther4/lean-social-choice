@@ -31,13 +31,12 @@ is_bot_of b p X ∨ is_top_of b p X
 def same_order (p p' : σ → ℝ) (x y x' y' : σ) : Prop :=
 ((p x < p y ↔ p' x' < p' y') ∧ (p y < p x ↔ p' y' < p' x'))
 
-def is_pivotal  (f : (ι → σ → ℝ) → (σ → ℝ)) (N : finset ι) (X : finset σ) 
+def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (N : finset ι) (X : finset σ) 
   (i : ι) (b : σ) : Prop := 
 ∃ (P P' : ι → σ → ℝ),
   (∀ j ∈ N, j ≠ i → ∀ x y ∈ X, same_order (P j) (P' j) x y x y) ∧ 
     (∀ i ∈ N, is_extremal b (P i) X) ∧ (∀ i ∈ N, is_extremal b (P' i) X) ∧
-      (∀ a ∈ X, a ≠ b → P i b < P i a ) ∧ (∀ a ∈ X, a ≠ b → P' i a < P' i b) ∧
-        (∀ a ∈ X, a ≠ b → f P b < f P a) ∧ (∀ a ∈ X, a ≠ b → f P' a < f P' b)
+      (is_bot_of b (P i) X) ∧ (is_top_of b (P' i) X) ∧ (is_bot_of b (f P) X) ∧ (is_top_of b (f P') X)
 
 def is_dictator_except (f : (ι → σ → ℝ) → (σ → ℝ))
   (N : finset ι) (X : finset σ) (i : ι) (b : σ) : Prop := 

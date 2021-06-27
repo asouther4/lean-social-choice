@@ -133,7 +133,7 @@ end
 variables {X : finset σ} {N : finset ι}
 
 lemma first_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
+  (hwp : weak_pareto f X N) (hind : ind_of_irr_alts f X N)
   (hX : 3 ≤ X.card)
   (b : σ) (b_in : b ∈ X) (P : ι → σ → ℝ)
   (hyp : ∀ i ∈ N, is_extremal b (P i) X) :
@@ -215,14 +215,14 @@ begin
       simp only [P₂, if_pos b_top, Q, makebetween_noteq a c b b c_neq_b.symm (P i) X X_ne,
                 makebetween_eq a c b (P i) X X_ne] at hP₂,
       linarith [b_top a a_in a_neq_b], }, },
-  have h_iir₁ := (not_congr (hf.2 a a_in b b_in P P₂ hPab)).mp (not_lt.mpr ha),
-  have h_iir₂ := (not_congr (hf.2 b b_in c c_in P P₂ hPbc)).mp (not_lt.mpr hc),
-  have h_pareto := hf.1 a a_in c c_in P₂ hP₂ac,
+  have h_iir₁ := (not_congr (hind a a_in b b_in P P₂ hPab)).mp (not_lt.mpr ha),
+  have h_iir₂ := (not_congr (hind b b_in c c_in P P₂ hPbc)).mp (not_lt.mpr hc),
+  have h_pareto := hwp a a_in c c_in P₂ hP₂ac,
   linarith,
 end    
 
 lemma second_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
+  (hwp : weak_pareto f X N) (hind : ind_of_irr_alts f X N)
   (hX : 3 ≤ X.card) (hN : 2 ≤ N.card) :
   ∀ b ∈ X, ∃ n' ∈ N, is_pivotal f N X n' b := 
 begin
@@ -243,7 +243,7 @@ begin
 end
 
 lemma third_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : ind_of_irr_alts f X N)
+  (hind : ind_of_irr_alts f X N)
   (hX : 3 ≤ X.card) (hN : 2 ≤ N.card) :
   ∀ b ∈ X, ∀ i ∈ N, is_pivotal f N X i b →
   is_dictator_except f N X i b :=
@@ -326,18 +326,18 @@ begin
   have hQQ' : ∀ i ∈ N, Q i a < Q i c ↔ Q' i a < Q' i c,
   { intros i i_in,
     rw [Q'_eq i a a_neq_b, Q'_eq i c c_neq_b], },
-  rw hf a a_in c c_in Q Q' hQQ', 
+  rw hind a a_in c c_in Q Q' hQQ', 
   have h₁ : f Q' a < f Q' b,
-  { rw ← (hf a a_in b b_in P' Q' hQ'ab),
+  { rw ← (hind a a_in b b_in P' Q' hQ'ab),
     exact i_piv.2.2.2.2.2.2 a a_in a_neq_b, },
   have h₂ : f Q' b < f Q' c,
-  { rw ← (hf b b_in c c_in P Q' hQ'bc),
+  { rw ← (hind b b_in c c_in P Q' hQ'bc),
     exact i_piv.2.2.2.2.2.1 c c_in c_neq_b, },
   exact h₁.trans h₂,
 end
 
 lemma fourth_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : ind_of_irr_alts f X N)
+  (hind : ind_of_irr_alts f X N)
   (hX : 3 ≤ X.card) (hN : 2 ≤ N.card)
   (h : ∀ b ∈ X, ∃ (n' ∈ N), is_pivotal f N X n' b) : 
   is_dictatorship f X N := 
@@ -350,7 +350,7 @@ begin
   { intros a a_in ha Pᵢ,
     obtain ⟨c, c_in, not_a, not_b⟩ := third_distinct_mem hX a_in b_in ha,
     obtain ⟨j, j_in, j_piv⟩ := h c c_in,
-    have j_dict := third_step hf hX hN c c_in j j_in j_piv, 
+    have j_dict := third_step hind hX hN c c_in j j_in j_piv, 
     have hij : i = j,
     { by_contra hij,
       rcases i_piv with ⟨R, R', hi₁, hi₂, hi₃, hi₄, hi₅, hi₆, hi₇⟩,
@@ -369,11 +369,11 @@ begin
   { exact ((irrefl _) hyp).rec _ },
   { exact (this y y_in hy.symm Pᵢ).2 hyp },
   { exact (this x x_in hx.symm Pᵢ).1 hyp },
-  { exact third_step hf hX hN b b_in i i_in i_piv x x_in y y_in hx.symm hy.symm Pᵢ hyp },
+  { exact third_step hind hX hN b b_in i i_in i_piv x x_in y y_in hx.symm hy.symm Pᵢ hyp },
 end
 
 lemma arrows_theorem {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
+  (hwp : weak_pareto f X N) (hind : ind_of_irr_alts f X N)
   (hX : 3 ≤ X.card) (hN : 2 ≤ N.card) :
   is_dictatorship f X N := 
-fourth_step hf.2 hX hN $ second_step hf hX hN
+fourth_step hind hX hN $ second_step hwp hind hX hN

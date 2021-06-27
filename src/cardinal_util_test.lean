@@ -28,15 +28,14 @@ def is_top_of (b : σ) (p : σ → ℝ) (X : finset σ): Prop :=
 def is_extremal (b : σ) (p : σ → ℝ) (X : finset σ) : Prop := 
 is_bot_of b p X ∨ is_top_of b p X
 
-
-def same_order (p p': σ → ℝ) (x y x' y' : σ) : Prop :=
+def same_order (p p' : σ → ℝ) (x y x' y' : σ) : Prop :=
 ((p x < p y ↔ p' x' < p' y') ∧ (p y < p x ↔ p' y' < p' x'))
 
 def is_pivotal  (f : (ι → σ → ℝ) → (σ → ℝ)) (N : finset ι) (X : finset σ) 
   (i : ι) (b : σ) : Prop := 
 ∃ (P P' : ι → σ → ℝ),
   (∀ j ∈ N, j ≠ i → ∀ x y ∈ X, same_order (P j) (P' j) x y x y) ∧ 
-    (∀ i ∈ N, is_extremal (P i) X b ) ∧ (∀ i ∈ N, is_extremal (P' i) X b ) ∧
+    (∀ i ∈ N, is_extremal b (P i) X) ∧ (∀ i ∈ N, is_extremal b (P' i) X) ∧
       (∀ a ∈ X, a ≠ b → P i b < P i a ) ∧ (∀ a ∈ X, a ≠ b → P' i a < P' i b) ∧
         (∀ a ∈ X, a ≠ b → f P b < f P a) ∧ (∀ a ∈ X, a ≠ b → f P' a < f P' b)
 
@@ -117,12 +116,12 @@ begin
 end
 
 lemma top_of_not_bot_of_extr {b : σ} {p : σ → ℝ} {X : finset σ} 
-  (extr : is_extremal p X b) (not_bot : ¬ is_bot_of b p X) :
+  (extr : is_extremal b p X) (not_bot : ¬ is_bot_of b p X) :
   is_top_of b p X := 
 extr.resolve_left not_bot 
 
 lemma bot_of_not_top_of_extr {b : σ} {p : σ → ℝ} {X : finset σ} 
-  (extr : is_extremal p X b) (not_top : ¬ is_top_of b p X) :
+  (extr : is_extremal b p X) (not_top : ¬ is_top_of b p X) :
   is_bot_of b p X := 
 extr.resolve_right not_top 
 
@@ -358,14 +357,14 @@ begin
   have hQQ' : ∀ i ∈ N, Q i a < Q i c ↔ Q' i a < Q' i c,
   { intros i i_in,
     rw [Q'_eq i a a_neq_b, Q'_eq i c c_neq_b], },
-  rw hf.2.1 a a_in c c_in Q Q' hQQ', 
+  rw hf.2 a a_in c c_in Q Q' hQQ', 
   have h₁ : f Q' a < f Q' b,
-  { rw ← (hf.2.1 a a_in b b_in P' Q' hQ'ab),
+  { rw ← (hf.2 a a_in b b_in P' Q' hQ'ab),
     exact i_piv.2.2.2.2.2.2 a a_in a_neq_b, },
   have h₂ : f Q' b < f Q' c,
-  { rw ← (hf.2.1 b b_in c c_in P Q' hQ'bc),
+  { rw ← (hf.2 b b_in c c_in P Q' hQ'bc),
     exact i_piv.2.2.2.2.2.1 c c_in c_neq_b, },
-  exact hf.2.2 a b c Q' h₁ h₂,
+  exact h₁.trans h₂,
 end
  
 example (a b : ℝ) (h1: a < b) : ¬ b < a := asymm h1

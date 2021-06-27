@@ -114,6 +114,10 @@ lemma bot_of_not_top_of_extr {b : σ} {p : σ → ℝ} {X : finset σ}
   is_bot_of b p X := 
 extr.resolve_right not_top 
 
+lemma extremal_of_bot_of {b : σ} {p : σ → ℝ} {X : finset σ} 
+  (h_bot: is_bot_of b p X) : is_extremal b p X := by left; exact h_bot
+
+
 lemma third_distinct_mem {X : finset σ} {a b : σ}
   (hX : 3 ≤ X.card) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
   ∃ c ∈ X, c ≠ a ∧ c ≠ b :=
@@ -124,6 +128,28 @@ begin
   cases card_pos.mp hpos with c hc,
   simp_rw mem_erase at hc,
   exact ⟨c, hc.2.2, hc.1, hc.2.1⟩,
+end
+
+lemma social_top_of_all_top {f : (ι → σ → ℝ) → σ → ℝ} 
+  {X : finset σ} {N : finset ι} {P : ι → σ → ℝ} {b : σ} (b_in : b ∈ X)
+  (hf: weak_pareto f X N) (hP : ∀ i ∈ N, is_top_of b (P i) X) : 
+  is_top_of b (f P) X := 
+begin
+  intros a a_in a_neq_b,
+  have hyp : ∀ i ∈ N, P i a < P i b := λ i i_in, 
+    hP i i_in a a_in a_neq_b,
+  exact hf a a_in b b_in P hyp,
+end
+
+lemma social_bot_of_all_bot {f : (ι → σ → ℝ) → σ → ℝ} 
+  {X : finset σ} {N : finset ι} {P : ι → σ → ℝ} {b : σ} (b_in : b ∈ X)
+  (hf: weak_pareto f X N) (hP : ∀ i ∈ N, is_bot_of b (P i) X) : 
+  is_bot_of b (f P) X := 
+begin
+  intros a a_in a_neq_b,
+  have hyp : ∀ i ∈ N, P i b < P i a := λ i i_in, 
+    hP i i_in a a_in a_neq_b,
+  exact hf b b_in a a_in P hyp,
 end
 
 
@@ -221,25 +247,52 @@ begin
   linarith,
 end    
 
+
+
+
 lemma second_step {f : (ι → σ → ℝ) → (σ → ℝ)}
   (hwp : weak_pareto f X N) (hind : ind_of_irr_alts f X N)
   (hX : 3 ≤ X.card) (hN : 2 ≤ N.card) :
   ∀ b ∈ X, ∃ n' ∈ N, is_pivotal f N X n' b := 
 begin
-  intros b hb,
-  have : ∃ p, is_bot_of b (f p) X ∧ ∀ i ∈ N, is_extremal b (p i) X, sorry,
-  cases this with p hp,
-  apply N.induction_on,
-  let D : finset ι := {i ∈ N | is_bot_of b (p i) X},
-  have : ∃ i, i ∈ D, sorry,
-  cases this with i hi,
-  use i,
-  --suffices : i ∈ D ∧ is_pivotal f D X i b, sorry,
-  --refine ⟨hi, _⟩,
-  --apply D.induction_on,
-  --have := D.induction_on _ _,
-  sorry,
-  sorry,
+  intros b b_in, 
+  have X_ne : X.nonempty := card_pos.1 (by linarith),
+  suffices: ∀ P : ι → σ → ℝ, ∀ D : finset ι, 
+          D = {i ∈ N | is_bot_of b (P i) X} → (∀ i ∈ N, is_extremal b (P i) X)
+          → is_bot_of b (f P) X → ∃ n' ∈ N, is_pivotal f N X n' b,
+  { let P : ι → σ → ℝ := λ i x,
+      if x = b then 0 else 1,
+    let D : finset ι := {i ∈ N | is_bot_of b (P i) X},
+    specialize this P D (by refl),
+    have h_bot : ∀ i ∈ N, is_bot_of b (P i) X,
+    { intros i i_in a a_in a_neq_b,
+      simp only [P], simp only [P, if_true, eq_self_iff_true],
+      rw [if_neg a_neq_b], 
+      linarith, },
+    exact this (λ i i_in, extremal_of_bot_of (h_bot i i_in))
+      (social_bot_of_all_bot b_in hwp h_bot), },
+
+  intros P D,
+  apply finset.induction_on D,
+  { intros h_null h_extr bf_bot,
+    have not_bot : ∀ j ∈ N, ¬ is_bot_of b (P j) X := sorry,
+    have bP_top : ∀ j ∈ N, is_top_of b (P j) X := λ j j_in,
+      top_of_not_bot_of_extr (h_extr j j_in) (not_bot j j_in),
+    have bf_top := social_top_of_all_top b_in hwp bP_top,
+    simp only at bf_top,
+    have : ∃ a ∈ X, a ≠ b := sorry,
+    rcases this with ⟨a, a_in, a_neq_b⟩,
+    linarith [bf_top a a_in a_neq_b,
+              bf_bot a a_in a_neq_b], },
+  { intros i s i_not_in ih h_insert h_extr bf_bot,
+    let P' : ι → σ → ℝ := λ j,
+      if j = i
+        then maketop (P j) b X X_ne
+      else 
+        P j,
+    by_cases hP' : is_top_of b (f P') X,
+    { sorry, },
+    {  sorry, }, }, 
 end
 
 lemma third_step {f : (ι → σ → ℝ) → (σ → ℝ)}

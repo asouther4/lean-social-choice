@@ -25,8 +25,9 @@ def is_bot_of (b : σ) (p : σ → ℝ) (X : finset σ) : Prop :=
 def is_top_of (b : σ) (p : σ → ℝ) (X : finset σ): Prop := 
 ∀ a ∈ X, a ≠ b → p a < p b
 
-def is_extremal (P : σ → ℝ) (X : finset σ) (s : σ) : Prop := 
-(∀ t ∈ X, t ≠ s → P s < P t) ∨ (∀ t ∈ X,  t ≠ s → P t < P s)
+def is_extremal (b : σ) (p : σ → ℝ) (X : finset σ) : Prop := 
+is_bot_of b p X ∨ is_top_of b p X
+
 
 def same_order (p p': σ → ℝ) (x y x' y' : σ) : Prop :=
 ((p x < p y ↔ p' x' < p' y') ∧ (p y < p x ↔ p' y' < p' x'))
@@ -43,10 +44,6 @@ def is_dictator_except (f : (ι → σ → ℝ) → (σ → ℝ))
   (N : finset ι) (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∀ a ∈ X, ∀ c ∈ X, a ≠ b → c ≠ b → 
     ∀ P : ι → σ → ℝ, P i a < P i c → f P a < f P c
-
-def is_transitive (f : (ι → σ → ℝ) → (σ → ℝ)) : Prop :=
-∀ (a b c : σ) (P : ι → σ → ℝ), 
-  f P a < f P b → f P b < f P c → f P a < f P c
 
 open classical
 
@@ -148,15 +145,15 @@ end
 variables {X : finset σ} {N : finset ι}
 
 lemma first_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N ∧ is_transitive f)
+  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
   (hX : finset.card X ≥ 3)
   (b : σ) (b_in : b ∈ X) (P : ι → σ → ℝ)
-  (hyp : ∀ i ∈ N, is_extremal (P i) X b) :
-  is_extremal (f P) X b := 
+  (hyp : ∀ i ∈ N, is_extremal b (P i) X) :
+  is_extremal b (f P) X := 
 begin
   have X_ne : X.nonempty := finset.card_pos.1 (by linarith),
   by_contradiction hnot,
-  unfold is_extremal at hnot,
+  simp only [is_extremal, is_bot_of, is_top_of] at hnot,
   push_neg at hnot,
   have : ∃ a : σ, ∃ c : σ, a ∈ X ∧ c ∈ X ∧
          a ≠ b ∧ c ≠ b ∧ a ≠ c ∧ f P b ≤ f P a ∧ f P c ≤ f P b,
@@ -244,17 +241,17 @@ begin
       rw [makebetween_noteq a c b b c_neq_b.symm (P i) X X_ne,
           makebetween_eq a c b (P i) X X_ne] at hP₂,
       linarith [b_top a a_in a_neq_b], }, },
-  have h_iir₁ := (not_congr (hf.2.1 a a_in b b_in P P₂ hPab)).mp (not_lt.mpr ha),
-  have h_iir₂ := (not_congr (hf.2.1 b b_in c c_in P P₂ hPbc)).mp (not_lt.mpr hc),
+  have h_iir₁ := (not_congr (hf.2 a a_in b b_in P P₂ hPab)).mp (not_lt.mpr ha),
+  have h_iir₂ := (not_congr (hf.2 b b_in c c_in P P₂ hPbc)).mp (not_lt.mpr hc),
   have h_pareto := hf.1 a a_in c c_in P₂ hP₂ac,
-  linarith [(not_congr (hf.2.1 a a_in b b_in P P₂ hPab)).mp (not_lt.mpr ha),
-            (not_congr (hf.2.1 b b_in c c_in P P₂ hPbc)).mp (not_lt.mpr hc),
+  linarith [(not_congr (hf.2 a a_in b b_in P P₂ hPab)).mp (not_lt.mpr ha),
+            (not_congr (hf.2 b b_in c c_in P P₂ hPbc)).mp (not_lt.mpr hc),
             hf.1 a a_in c c_in P₂ hP₂ac],
 end      
 
 
 lemma second_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N ∧ is_transitive f)
+  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
   (hX : finset.card X ≥ 3)
   (hN : finset.card N ≥ 2) :
   ∀ b ∈ X, ∃ n' ∈ N, is_pivotal f N X n' b := 
@@ -264,7 +261,7 @@ end
 
 
 lemma third_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N ∧ is_transitive f)
+  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
   (hX : finset.card X ≥ 3)
   (hN : finset.card N ≥ 2) :
   ∀ b ∈ X, ∀ i ∈ N, is_pivotal f N X i b →
@@ -377,8 +374,7 @@ example (a : ℝ) : ¬ a < a  := irrefl a
 
 lemma fourth_step {f : (ι → σ → ℝ) → (σ → ℝ)}
     (hf : weak_pareto f X N 
-        ∧ ind_of_irr_alts f X N 
-        ∧ is_transitive f)
+        ∧ ind_of_irr_alts f X N)
     (hX : finset.card X ≥ 3)
     (hN : finset.card N ≥ 2)
   (h : ∀ b ∈ X, ∃ (n' ∈ N), is_pivotal f N X n' b) : 
@@ -402,7 +398,8 @@ begin
           ((hi₁ j j_in (ne_comm.1 hij) a b a_in b_in).2.1 _)),
       by_contra foo,
       have bar := (hi₂ j j_in).resolve_left,
-      simp only [and_imp, exists_prop, ne, exists_imp_distrib, not_forall] at bar,
+      simp only [is_top_of, is_bot_of, and_imp, 
+                 exists_prop, ne, exists_imp_distrib, not_forall] at bar,
       refine asymm (hi₆ a a_in ha) _,
       exact (j_dict a a_in b b_in (ne_comm.1 not_a) 
         (ne_comm.1 not_b) R (bar a a_in ha foo a a_in ha)), },
@@ -417,9 +414,7 @@ begin
 end
 
 lemma arrows_theorem {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : weak_pareto f X N 
-        ∧ ind_of_irr_alts f X N 
-        ∧ is_transitive f)
+  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
   (hX : 3 ≤ card X) 
   (hN : 2 ≤ card N):
   is_dictatorship f X N := 

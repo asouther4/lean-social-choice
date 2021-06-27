@@ -243,7 +243,7 @@ begin
 end
 
 lemma third_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
+  (hf : ind_of_irr_alts f X N)
   (hX : 3 ≤ X.card) (hN : 2 ≤ N.card) :
   ∀ b ∈ X, ∀ i ∈ N, is_pivotal f N X i b →
   is_dictator_except f N X i b :=
@@ -326,18 +326,18 @@ begin
   have hQQ' : ∀ i ∈ N, Q i a < Q i c ↔ Q' i a < Q' i c,
   { intros i i_in,
     rw [Q'_eq i a a_neq_b, Q'_eq i c c_neq_b], },
-  rw hf.2 a a_in c c_in Q Q' hQQ', 
+  rw hf a a_in c c_in Q Q' hQQ', 
   have h₁ : f Q' a < f Q' b,
-  { rw ← (hf.2 a a_in b b_in P' Q' hQ'ab),
+  { rw ← (hf a a_in b b_in P' Q' hQ'ab),
     exact i_piv.2.2.2.2.2.2 a a_in a_neq_b, },
   have h₂ : f Q' b < f Q' c,
-  { rw ← (hf.2 b b_in c c_in P Q' hQ'bc),
+  { rw ← (hf b b_in c c_in P Q' hQ'bc),
     exact i_piv.2.2.2.2.2.1 c c_in c_neq_b, },
   exact h₁.trans h₂,
 end
 
 lemma fourth_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
+  (hf : ind_of_irr_alts f X N)
   (hX : 3 ≤ X.card) (hN : 2 ≤ N.card)
   (h : ∀ b ∈ X, ∃ (n' ∈ N), is_pivotal f N X n' b) : 
   is_dictatorship f X N := 
@@ -376,4 +376,4 @@ lemma arrows_theorem {f : (ι → σ → ℝ) → (σ → ℝ)}
   (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
   (hX : 3 ≤ X.card) (hN : 2 ≤ N.card) :
   is_dictatorship f X N := 
-fourth_step hf hX hN $ second_step hf hX hN
+fourth_step hf.2 hX hN $ second_step hf hX hN

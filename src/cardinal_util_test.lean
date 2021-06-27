@@ -69,7 +69,7 @@ lemma makebetween_noteq (a b c d: σ) (hd : d ≠ b) (p : σ → ℝ) (X : finse
 function.update_noteq hd ((p a + p c) / 2) p
 
 lemma makebetween_eq (a b c : σ) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
-  (makebetween p a b c) b = (p a + p c) / 2 :=
+  makebetween p a b c b = (p a + p c) / 2 :=
 function.update_same _ _ _
 
 --should rename to `maketop_lt_maketop`
@@ -82,14 +82,14 @@ by simpa [maketop, a_neq] using
 --should rename to `makebot_lt_makebot`
 lemma lt_of_makebot (b c : σ) (p : σ → ℝ) (c_neq : c ≠ b) (X : finset σ) (hX : X.nonempty)
   (c_in : c ∈ X) : 
-  (makebot p b X hX) b < (makebot p b X hX) c :=
+  makebot p b X hX b < makebot p b X hX c :=
 by simpa [makebot, c_neq] using sub_lt_iff_lt_add'.mpr 
   (((X.image p).min'_le (p c) (mem_image_of_mem p c_in)).trans_lt (lt_one_add _))
 
 --should rename to `makebetween_lt_makebetween_top`
 lemma lt_top_of_makebetween (a b c : σ) (p : σ → ℝ) (c_neq : c ≠ b) (X : finset σ) (hX : X.nonempty) 
   (hc : p a < p c) : 
-  (makebetween p a b c) b < (makebetween p a b c) c :=
+  makebetween p a b c b < makebetween p a b c c :=
 begin
   simp only [makebetween, function.update_same, function.update_noteq c_neq],
   linarith,
@@ -98,7 +98,7 @@ end
 --should rename to `makebetween_lt_makebetween_bot`
 lemma bot_lt_of_makebetween (a b c : σ) (p : σ → ℝ) (a_neq : a ≠ b ) (X : finset σ) (hX : X.nonempty)
   (ha : p a < p c) : 
-  (makebetween p a b c) a < (makebetween p a b c) b :=
+  makebetween p a b c a < makebetween p a b c b :=
 begin
   simp only [makebetween, function.update_same, function.update_noteq a_neq],
   linarith,
@@ -195,32 +195,15 @@ begin
       rw function.update_noteq a_neq_c (P i a + 1),
       linarith, }, },
   have hPab : ∀ i ∈ N, P i a < P i b ↔ P₂ i a < P₂ i b,
-  { intros i i_in,
-    split,
-    { intro hP,
-      simp [P₂],
-      by_cases b_top : is_top_of b (P i) X,
-      { rw if_pos b_top, 
-        simp [Q],
-        rw [makebetween_noteq a c b a a_neq_c (P i) X X_ne,
-            makebetween_noteq a c b b c_neq_b.symm (P i) X X_ne],
-        exact hP, },
-      { rw if_neg b_top,
-        simp [R],
-        rw [function.update_noteq a_neq_c (P i a + 1) (P i),
-            function.update_noteq c_neq_b.symm (P i a + 1) (P i)],
-        exact hP, }, },
-    { intro hP₂,
-      by_contradiction hP,
+  { refine λ i i_in, ⟨λ hP, _, λ hP₂, _⟩, 
+    { by_cases b_top : is_top_of b (P i) X; simp only [P₂, Q, R];
+        simpa [b_top, makebetween_noteq _ _ _ _ _ _ _ X_ne, a_neq_c, c_neq_b.symm] },
+    { by_contradiction hP,
       have not_top : ¬ is_top_of b (P i) X,
       { by_contradiction b_top,
         exact hP (b_top a a_in a_neq_b), },
-      simp [P₂] at hP₂,
-      rw if_neg not_top at hP₂,
-      simp [R] at hP₂,
-      rw [function.update_noteq a_neq_c (P i a + 1) (P i),
-            function.update_noteq c_neq_b.symm (P i a + 1) (P i)] at hP₂,
-      exact hP hP₂, }, },
+      simp only at hP₂, simp [P₂, if_neg not_top, R, a_neq_c, c_neq_b.symm] at hP₂,
+      exact hP hP₂ }, },
   have hPbc : ∀ i ∈ N, P i b < P i c ↔ P₂ i b < P₂ i c, 
   { intros i i_in,
     split,

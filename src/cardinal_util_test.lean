@@ -170,7 +170,7 @@ begin
         exact ⟨a_in, d_in, a_neq_b, d_neq_b, d_neq_a.symm, ha, hd⟩, }, }, }, 
   classical,
   rcases this with ⟨a, c, a_in, c_in, a_neq_b, c_neq_b, a_neq_c, ha, hc ⟩,
-  let Q : ι → σ → ℝ := λ j, (makebetween (P j) a c b),
+  let Q : ι → σ → ℝ := λ j, makebetween (P j) a c b,
   let R : ι → σ → ℝ := λ j, function.update (P j) c (P j a + 1),
   let P₂ : ι → σ → ℝ := λ j,
     if is_top_of b (P j) X then (Q j) else (R j),
@@ -245,23 +245,31 @@ begin
   linarith [(not_congr (hf.2 a a_in b b_in P P₂ hPab)).mp (not_lt.mpr ha),
             (not_congr (hf.2 b b_in c c_in P P₂ hPbc)).mp (not_lt.mpr hc),
             hf.1 a a_in c c_in P₂ hP₂ac],
-end      
-
+end    
 
 lemma second_step {f : (ι → σ → ℝ) → (σ → ℝ)}
   (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
-  (hX : finset.card X ≥ 3)
-  (hN : finset.card N ≥ 2) :
+  (hX : 3 ≤ X.card) (hN : 2 ≤ N.card) :
   ∀ b ∈ X, ∃ n' ∈ N, is_pivotal f N X n' b := 
 begin
+  intros b hb,
+  have : ∃ p, is_bot_of b (f p) X ∧ ∀ i ∈ N, is_extremal b (p i) X, sorry,
+  cases this with p hp,
+  apply N.induction_on,
+  let D : finset ι := {i ∈ N | is_bot_of b (p i) X},
+  have : ∃ i, i ∈ D, sorry,
+  cases this with i hi,
+  use i,
+  --suffices : i ∈ D ∧ is_pivotal f D X i b, sorry,
+  --refine ⟨hi, _⟩,
+  apply D.induction_on,
+  have := D.induction_on _ _,
   sorry,
 end
 
-
 lemma third_step {f : (ι → σ → ℝ) → (σ → ℝ)}
   (hf : weak_pareto f X N ∧ ind_of_irr_alts f X N)
-  (hX : finset.card X ≥ 3)
-  (hN : finset.card N ≥ 2) :
+  (hX : 3 ≤ X.card) (hN : 2 ≤ N.card) :
   ∀ b ∈ X, ∀ i ∈ N, is_pivotal f N X i b →
   is_dictator_except f N X i b :=
 begin

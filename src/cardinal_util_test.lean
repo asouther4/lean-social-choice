@@ -8,29 +8,54 @@ variables {σ ι : Type} [decidable_eq σ] [decidable_eq ι]
 
 -- Important Definitions -- 
 
+
+
+/- A social welfare function satisfies the Weak Pareto Criterion if for any two
+  social states x and y, every individual ranks y higher than x
+  then society must rank y higher than x. -/
 def weak_pareto (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) (N : finset ι) : Prop := 
 ∀ (x ∈ X) (y ∈ X) (P : ι → σ → ℝ), (∀ i ∈ N, P i x < P i y) → (f P) x < (f P) y
 
+/- Suppose in two utility functions
+  all individuals rank x and y in the exact same order 
+  A social welfare function is Independent of Irrelevant Alternatives if two -/
 def ind_of_irr_alts (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) (N : finset ι) : Prop := 
 ∀ (x ∈ X) (y ∈ X) (P P' : ι → σ → ℝ), 
   (∀ i ∈ N, P i x < P i y ↔ P' i x < P' i y) →
     (f P x < f P y ↔ f P' x < f P' y)
 
+/- A social welfare function is a dicatorship if a single individual i 
+  possesses the power to determine the group's ordering of any two social states. -/
 def is_dictatorship (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) (N : finset ι) : Prop :=
 ∃ i ∈ N, ∀ (x y ∈ X) (P : ι → σ → ℝ), P i x < P i y → f P x < f P y
 
+/- A social state b is at the bottom of the set X with respect to the ranking p
+  if b is ranked strictly lower than every other a ∈ X. -/
 def is_bot_of (b : σ) (p : σ → ℝ) (X : finset σ) : Prop :=
 ∀ a ∈ X, a ≠ b → p b < p a
 
+/- A social state b is at the top of the set X with respect to the ranking p
+  if b is ranked strictly higher than every other a ∈ X. -/
 def is_top_of (b : σ) (p : σ → ℝ) (X : finset σ): Prop := 
 ∀ a ∈ X, a ≠ b → p a < p b
 
+/- A social state b is exremal with respect to the set X the ranking p
+  if b is either at the bottom or the top. -/
 def is_extremal (b : σ) (p : σ → ℝ) (X : finset σ) : Prop := 
 is_bot_of b p X ∨ is_top_of b p X
 
+/- Social sates x, y, x', and y' are in the same order with respect to two rankings
+p and p' if x and y have the same ordering in p as x' and y' have in p'. -/
 def same_order (p p' : σ → ℝ) (x y x' y' : σ) : Prop :=
 (p x < p y ↔ p' x' < p' y') ∧ (p y < p x ↔ p' y' < p' x')
 
+/- An individual i is pivotal over a social state b if we can find two
+    rankings P and P' with the following properties: 
+  
+  ⋆ all individuals except for i place all social states in the same order in both rankings
+  ⋆ all individuals (including i) place b in an extremal position in both rankings
+  ⋆ i places b at the bottom of her rankings in P, but the top of her rankigns in P'
+  ⋆ society places b at the bottom of its rankings in P, but the top of its rankings in P' -/
 def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (N : finset ι) (X : finset σ) 
   (i : ι) (b : σ) : Prop := 
 ∃ (P P' : ι → σ → ℝ),
@@ -38,18 +63,26 @@ def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (N : finset ι) (X : f
     (∀ i ∈ N, is_extremal b (P i) X) ∧ (∀ i ∈ N, is_extremal b (P' i) X) ∧
       (is_bot_of b (P i) X) ∧ (is_top_of b (P' i) X) ∧ (is_bot_of b (f P) X) ∧ (is_top_of b (f P') X)
 
+/- An individual is a dictator *except* for b if she is a dictator over every 
+  pair of alternatives distinct alternatives not equal to b.  -/
 def is_dictator_except (f : (ι → σ → ℝ) → (σ → ℝ))
   (N : finset ι) (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∀ a ∈ X, ∀ c ∈ X, a ≠ b → c ≠ b → ∀ P : ι → σ → ℝ, P i a < P i c → f P a < f P c
 
 open classical
 
+/- Given an arbitary ranking p, `maketop b X` outputs a new ranking
+  which is the exact same as p except b is now placed at the top of the set X. -/
 noncomputable def maketop (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty): σ → ℝ :=
 function.update p b $ ((X.image p).max' (h.image p)) + 1
 
+/- Given an arbitary ranking p, `makebot b X` outputs a new ranking
+  which is the exact same as p except b is now placed at the bottom of the set X. -/
 noncomputable def makebot (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty): σ → ℝ :=
 function.update p b $ ((X.image p).min' (h.image p)) - 1
 
+/- Given an arbitary ranking p, `makebetween a b c` outputs a new ranking
+  which is the exact same as p except b is now ranked in the middle of a and c.  -/
 noncomputable def makebetween (p : σ → ℝ) (a b c : σ) : σ → ℝ :=
 function.update p b $ (p a + p c) / 2
 

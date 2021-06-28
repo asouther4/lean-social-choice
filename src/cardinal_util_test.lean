@@ -1,5 +1,4 @@
 import data.real.basic
-import data.finset.lattice 
 import data.set.basic
 
 open finset

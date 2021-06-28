@@ -22,9 +22,10 @@ variables {σ ι : Type}
 def weak_pareto (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (P : ι → σ → ℝ), (∀ i : ι, P i x < P i y) → (f P) x < (f P) y
 
-/-- Suppose in two utility functions
-  all individuals rank x and y in the exact same order 
-  A social welfare function is Independent of Irrelevant Alternatives if two -/
+/-- Suppose every voter's ordering of X and Y remains unchanged between two 
+  rankings `P` and `P'`. We say that a social welfare function is 
+  Independent of Irrelevant Alternatives if the group's ordering of X and Y
+  remains unchanged too. -/
 def ind_of_irr_alts (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (P P' : ι → σ → ℝ), 
   (∀ i : ι, P i x < P i y ↔ P' i x < P' i y) → (f P x < f P y ↔ f P' x < f P' y)

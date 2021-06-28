@@ -156,18 +156,6 @@ lemma extremal_of_bot_of {b : σ} {p : σ → ℝ} {X : finset σ}
   (h_bot: is_bot_of b p X) : is_extremal b p X := by left; exact h_bot
 
 
-lemma third_distinct_mem {X : finset σ} {a b : σ}
-  (hX : 3 ≤ X.card) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
-  ∃ c ∈ X, c ≠ a ∧ c ≠ b :=
-begin
-  have hpos : 0 < ((X.erase b).erase a).card,
-  { simpa only [card_erase_of_mem, mem_erase_of_ne_of_mem h a_in, b_in]
-      using nat.pred_le_pred (nat.pred_le_pred hX) }, 
-  cases card_pos.mp hpos with c hc,
-  simp_rw mem_erase at hc,
-  exact ⟨c, hc.2.2, hc.1, hc.2.1⟩,
-end
-
 lemma social_top_of_all_top {f : (ι → σ → ℝ) → σ → ℝ} 
   {X : finset σ} {P : ι → σ → ℝ} {b : σ} (b_in : b ∈ X)
   (hf: weak_pareto f X) (hP : ∀ i : ι, is_top_of b (P i) X) : 
@@ -190,6 +178,31 @@ begin
   exact hf b b_in a a_in P hyp,
 end
 
+lemma second_distinct_mem {X : finset σ} {a : σ}
+  (hX : 3 ≤ X.card) (a_in : a ∈ X)  : 
+  ∃ b ∈ X, b ≠ a :=
+begin
+  have hpos : 0 < (X.erase a).card,
+  { rw card_erase_of_mem a_in,
+    have:= nat.pred_le_pred hX,
+    rw (2: ℕ).pred_succ at this,
+    linarith, },
+  cases card_pos.mp hpos with b hb,
+  simp_rw mem_erase at hb,
+  exact ⟨b, hb.2, hb.1⟩,
+end
+
+lemma third_distinct_mem {X : finset σ} {a b : σ}
+  (hX : 3 ≤ X.card) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
+  ∃ c ∈ X, c ≠ a ∧ c ≠ b :=
+begin
+  have hpos : 0 < ((X.erase b).erase a).card,
+  { simpa only [card_erase_of_mem, mem_erase_of_ne_of_mem h a_in, b_in]
+      using nat.pred_le_pred (nat.pred_le_pred hX) }, 
+  cases card_pos.mp hpos with c hc,
+  simp_rw mem_erase at hc,
+  exact ⟨c, hc.2.2, hc.1, hc.2.1⟩,
+end
 
 ---- The Proof --------
 
@@ -269,8 +282,6 @@ begin
 end    
 
 
-
-
 lemma second_step {f : (ι → σ → ℝ) → (σ → ℝ)}
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) :
@@ -278,35 +289,34 @@ lemma second_step {f : (ι → σ → ℝ) → (σ → ℝ)}
 begin
   intros b b_in, 
   have X_ne : X.nonempty := card_pos.1 (by linarith),
-  suffices: ∀ P : ι → σ → ℝ, ∀ D : finset ι, 
+  suffices: ∀ D : finset ι, ∀ P : ι → σ → ℝ, 
           D = {i ∈ finset.univ | is_bot_of b (P i) X} → (∀ i : ι, is_extremal b (P i) X)
           → is_bot_of b (f P) X → ∃ n' : ι, is_pivotal f X n' b,
   { let P : ι → σ → ℝ := λ i x,
       if x = b then 0 else 1,
     let D : finset ι := {i ∈ finset.univ | is_bot_of b (P i) X},
-    specialize this P D (by refl),
+    specialize this D P (by refl),
     have h_bot : ∀ i : ι, is_bot_of b (P i) X,
     { intros i a a_in a_neq_b,
       simp only [P], simp only [P, if_true, eq_self_iff_true],
       rw [if_neg a_neq_b], 
       linarith, },
-    
     exact this (λ i, extremal_of_bot_of (h_bot i))
       (social_bot_of_all_bot b_in hwp h_bot), },
 
-  intros P D,
+  intros D,
   apply finset.induction_on D,
-  { intros h_null h_extr bf_bot,
-    have not_bot : ∀ j : ι, ¬ is_bot_of b (P j) X := sorry,
+  { intros P h_null h_extr bf_bot,
+    rw [eq_comm, eq_empty_iff_forall_not_mem] at h_null, 
+    simp only [true_and, sep_def, mem_filter, mem_univ] at h_null,
     have bP_top : ∀ j : ι, is_top_of b (P j) X := λ j,
-      top_of_not_bot_of_extr (h_extr j) (not_bot j),
+      top_of_not_bot_of_extr (h_extr j) (h_null j),
     have bf_top := social_top_of_all_top b_in hwp bP_top,
     simp only at bf_top,
-    have : ∃ a ∈ X, a ≠ b := sorry,
-    rcases this with ⟨a, a_in, a_neq_b⟩,
+    obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
     linarith [bf_top a a_in a_neq_b,
               bf_bot a a_in a_neq_b], },
-  { intros i s i_not_in ih h_insert h_extr bf_bot,
+  { intros i s i_not_in ih P h_insert h_extr bf_bot,
     let P' : ι → σ → ℝ := λ j,
       if j = i
         then maketop (P j) b X X_ne
@@ -314,11 +324,8 @@ begin
         P j,
     have : i ∈ {j ∈ univ | is_bot_of b (P j) X} := 
           by rw ← h_insert; exact mem_insert_self i s,
-    by_cases hP' : is_top_of b (f P') X,
-    { use i, use P, use P',
-      refine ⟨_, h_extr, _ , _, _, bf_bot, hP'⟩,
-      { sorry, },
-      { intro j,
+    have hP'_extr : ∀ (i : ι), is_extremal b (P' i) X,
+    { intro j,
         by_cases hj : j = i,
         { right,
           intros a a_in a_neq_b,
@@ -328,12 +335,46 @@ begin
         { simp [P'],
           rw if_neg hj,
           exact h_extr j, }, },
+    by_cases hP' : is_top_of b (f P') X,
+    { use i, use P, use P',
+      refine ⟨_, h_extr, hP'_extr , _, _, bf_bot, hP'⟩,
+      { intros j hj x y x_in y_in,
+        simp [P', same_order],
+        rw if_neg hj,
+        simp only [iff_self, and_self], },
       { simp only [true_and, sep_def, mem_filter, mem_univ] at this,
         exact this, },
       { simp only [P'], 
         simp only [eq_self_iff_true, if_true],
         exact top_of_maketop b (P i) X X_ne, }, },
-    { sorry, }, }, 
+    { have hsP' : s = {i ∈ univ | is_bot_of b (P' i) X},
+      { ext j, split,
+        { intro hs,
+          have hj : ¬ j = i := by by_contradiction hj; rw hj at hs;
+            exact i_not_in hs,
+          simp only [P', true_and, sep_def, mem_filter, mem_univ],
+          rw if_neg hj,
+          suffices hj_insert : j ∈ insert i s,
+          { rw h_insert at hj_insert,
+            simp only [P', true_and, sep_def, mem_filter, mem_univ] at hj_insert,
+            exact hj_insert },
+          exact mem_insert_of_mem hs, },
+        { intro hj,
+          simp only [P', true_and, sep_def, mem_filter, mem_univ] at hj,
+          have i_neq_j : ¬ j = i,
+          { by_contradiction,
+            
+            rw [if_pos h, h] at hj,
+            obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
+            linarith[(top_of_maketop b (P i) X X_ne) a a_in a_neq_b, 
+            hj a a_in a_neq_b], },
+          rw [← erase_insert i_not_in, h_insert],
+          rw if_neg i_neq_j at hj,
+          simp only [true_and, sep_def, mem_filter, mem_univ, mem_erase, ne.def],
+          exact ⟨i_neq_j, hj⟩, }, },
+      specialize ih P' hsP' hP'_extr (bot_of_not_top_of_extr 
+        (first_step hwp hind hX b b_in P' hP'_extr) hP'),
+      exact ih, }, }, 
 end
 
 lemma third_step {f : (ι → σ → ℝ) → (σ → ℝ)}

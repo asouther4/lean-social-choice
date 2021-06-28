@@ -90,7 +90,7 @@ noncomputable def makebetween (p : σ → ℝ) (a b c : σ) : σ → ℝ :=
 update p b $ (p a + p c) / 2
 
 
----- Preliminary Lemmas ----
+-- ## Preliminary Lemmas
 
 variables {a b c d : σ} {p : σ → ℝ} {P : ι → σ → ℝ} {f : (ι → σ → ℝ) → σ → ℝ} {X : finset σ}
 
@@ -153,6 +153,9 @@ hextr.resolve_right not_top
 lemma extremal_of_bot_of (h_bot : is_bot_of b p X) : is_extremal b p X := 
 or.inl h_bot
 
+lemma extremal_of_top_of (h_bot : is_top_of b p X) : is_extremal b p X := 
+or.inr h_bot
+
 lemma social_top_of_all_top (b_in : b ∈ X) (hf : weak_pareto f X) 
   (hP : ∀ i : ι, is_top_of b (P i) X) : 
   is_top_of b (f P) X := 
@@ -168,12 +171,10 @@ lemma second_distinct_mem (hX : 3 ≤ X.card) (a_in : a ∈ X) :
 begin
   have hpos : 0 < (X.erase a).card,
   { rw card_erase_of_mem a_in,
-    have := nat.pred_le_pred hX,
-    rw (2: ℕ).pred_succ at this,
-    linarith, },
+    exact zero_le_one.trans_lt (nat.pred_le_pred hX) },
   cases card_pos.mp hpos with b hb,
-  simp_rw mem_erase at hb,
-  exact ⟨b, hb.2, hb.1⟩,
+  cases mem_erase.mp hb with hne H,
+  exact ⟨b, H, hne⟩,
 end
 
 lemma third_distinct_mem (hX : 3 ≤ X.card) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
@@ -193,7 +194,6 @@ lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b_in : b ∈ X) (hyp : ∀ i : ι, is_extremal b (P i) X) :
   is_extremal b (f P) X := 
 begin
-  have X_ne : X.nonempty := card_pos.1 (by linarith),
   by_contradiction hnot,
   simp only [is_extremal, is_bot_of, is_top_of] at hnot,
   push_neg at hnot,
@@ -282,22 +282,16 @@ begin
   { intros P h_null h_extr bf_bot,
     rw [eq_comm, eq_empty_iff_forall_not_mem] at h_null, 
     simp only [true_and, sep_def, mem_filter, mem_univ] at h_null,
-    have bP_top : ∀ j : ι, is_top_of b (P j) X := λ j,
-      top_of_not_bot_of_extr (h_extr j) (h_null j),
+    have bP_top : ∀ j, is_top_of b (P j) X := λ j, top_of_not_bot_of_extr (h_extr j) (h_null j),
     have bf_top := social_top_of_all_top b_in hwp bP_top,
     simp only at bf_top,
     obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
     linarith [bf_top a a_in a_neq_b,
               bf_bot a a_in a_neq_b], },
   { intros i s i_not_in ih P h_insert h_extr bf_bot,
-    let P' : ι → σ → ℝ := λ j,
-      if j = i
-        then maketop (P j) b X X_ne
-      else 
-        P j,
-    have : i ∈ {j ∈ univ | is_bot_of b (P j) X} := 
-          by rw ← h_insert; exact mem_insert_self i s,
-    have hP'_extr : ∀ (i : ι), is_extremal b (P' i) X,
+    let P' : ι → σ → ℝ := λ j, if j = i then maketop (P j) b X X_ne else P j,
+    have : i ∈ {j ∈ univ | is_bot_of b (P j) X}, { rw ← h_insert, exact mem_insert_self i s },
+    have hP'_extr : ∀ i, is_extremal b (P' i) X,
     { intro j,
         by_cases hj : j = i,
         { right,
@@ -479,3 +473,5 @@ end
 lemma arrows_theorem (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
   is_dictatorship f X := 
 fourth_step hind hX $ second_step hwp hind hX
+
+#lint

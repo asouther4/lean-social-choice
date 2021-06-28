@@ -27,8 +27,7 @@ def weak_pareto (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop 
   A social welfare function is Independent of Irrelevant Alternatives if two -/
 def ind_of_irr_alts (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (P P' : ι → σ → ℝ), 
-  (∀ i : ι, P i x < P i y ↔ P' i x < P' i y) →
-    (f P x < f P y ↔ f P' x < f P' y)
+  (∀ i : ι, P i x < P i y ↔ P' i x < P' i y) → (f P x < f P y ↔ f P' x < f P' y)
 
 /-- A social welfare function is a *dicatorship* if a single individual `i` 
   possesses the power to determine society's ordering of any two social states. -/
@@ -61,54 +60,53 @@ def same_order (p p' : σ → ℝ) (x y x' y' : σ) : Prop :=
   ⋆ all individuals place `b` in an extremal position in both rankings
   ⋆ `i` ranks `b` at the bottom of their rankings in `P`, but the top of their rankigns in `P'`
   ⋆ society ranks `b` at the bottom of its rankings in `P`, but the top of its rankings in `P'` -/
-def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ) 
-  (i : ι) (b : σ) : Prop := 
+def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∃ (P P' : ι → σ → ℝ),
   (∀ j : ι, j ≠ i → ∀ x y ∈ X, same_order (P j) (P' j) x y x y) ∧ 
     (∀ i : ι, is_extremal b (P i) X) ∧ (∀ i : ι, is_extremal b (P' i) X) ∧
-      (is_bot_of b (P i) X) ∧ (is_top_of b (P' i) X) ∧ (is_bot_of b (f P) X) ∧ (is_top_of b (f P') X)
+      (is_bot_of b (P i) X) ∧ (is_top_of b (P' i) X) ∧ 
+        (is_bot_of b (f P) X) ∧ (is_top_of b (f P') X)
 
 /-- An individual is a dictator with respect to all social states in a given set *except* for `b` 
   if they are a dictator over every pair of distinct alternatives not equal to `b`.  -/
-def is_dictator_except (f : (ι → σ → ℝ) → (σ → ℝ))
-  (X : finset σ) (i : ι) (b : σ) : Prop := 
+def is_dictator_except (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∀ a ∈ X, ∀ c ∈ X, a ≠ b → c ≠ b → ∀ P : ι → σ → ℝ, P i a < P i c → f P a < f P c
 
-open classical
+open classical function
 
 /-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
   `maketop b p X` updates `p` so that `b` now ranked at the top of `X`. -/
 noncomputable def maketop (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty): σ → ℝ :=
-function.update p b $ ((X.image p).max' (h.image p)) + 1
+update p b $ ((X.image p).max' (h.image p)) + 1
 
 /-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
   `makebot b p X` updates `p` so that `b` now ranked at the bottom of `X`. -/
 noncomputable def makebot (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty): σ → ℝ :=
-function.update p b $ ((X.image p).min' (h.image p)) - 1
+update p b $ ((X.image p).min' (h.image p)) - 1
 
 /-- Given an arbitary ranking `p` and social states `a`, `b`, and `c`, 
   `makebetween p a b c` updates `p` so that `b` now ranked between `a` and `c`. -/
 noncomputable def makebetween (p : σ → ℝ) (a b c : σ) : σ → ℝ :=
-function.update p b $ (p a + p c) / 2
+update p b $ (p a + p c) / 2
 
 
 ---- Preliminary Lemmas ----
 
 lemma maketop_noteq (a b : σ) (ha : a ≠ b) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
   maketop p b X hX a = p a := 
-function.update_noteq ha _ p
+update_noteq ha _ p
 
 lemma makebot_noteq (a b : σ) (ha : a ≠ b) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
   makebot p b X hX a = p a := 
-function.update_noteq ha _ p
+update_noteq ha _ p
 
 lemma makebetween_noteq (a b c d: σ) (hd : d ≠ b) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
   makebetween p a b c d = p d :=
-function.update_noteq hd ((p a + p c) / 2) p
+update_noteq hd ((p a + p c) / 2) p
 
 lemma makebetween_eq (a b c : σ) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
   makebetween p a b c b = (p a + p c) / 2 :=
-function.update_same _ _ _
+update_same _ _ _
 
 --should rename to `maketop_lt_maketop`
 lemma lt_of_maketop (a b : σ) (p : σ → ℝ) (a_neq : a ≠ b) (X : finset σ) (hX : X.nonempty)
@@ -129,7 +127,7 @@ lemma lt_top_of_makebetween (a b c : σ) (p : σ → ℝ) (c_neq : c ≠ b) (X :
   (hc : p a < p c) : 
   makebetween p a b c b < makebetween p a b c c :=
 begin
-  simp only [makebetween, function.update_same, function.update_noteq c_neq],
+  simp only [makebetween, update_same, update_noteq c_neq],
   linarith,
 end
 
@@ -138,7 +136,7 @@ lemma bot_lt_of_makebetween (a b c : σ) (p : σ → ℝ) (a_neq : a ≠ b ) (X 
   (ha : p a < p c) : 
   makebetween p a b c a < makebetween p a b c b :=
 begin
-  simp only [makebetween, function.update_same, function.update_noteq a_neq],
+  simp only [makebetween, update_same, update_noteq a_neq],
   linarith,
 end
 
@@ -224,7 +222,7 @@ begin
   classical,
   rcases this with ⟨a, c, a_in, c_in, a_neq_b, c_neq_b, a_neq_c, ha, hc ⟩,
   let Q : ι → σ → ℝ := λ j, makebetween (P j) a c b,
-  let R : ι → σ → ℝ := λ j, function.update (P j) c (P j a + 1),
+  let R : ι → σ → ℝ := λ j, update (P j) c (P j a + 1),
   let P₂ : ι → σ → ℝ := λ j, if is_top_of b (P j) X then Q j else R j,
   have hP₂ac : ∀ i : ι, P₂ i a < P₂ i c,
   { intros i,
@@ -236,7 +234,7 @@ begin
     { simp [P₂],
       rw if_neg b_top,
       simp [R],
-      rw function.update_noteq a_neq_c (P i a + 1),
+      rw update_noteq a_neq_c (P i a + 1),
       linarith, }, },
   have hPab : ∀ i : ι, P i a < P i b ↔ P₂ i a < P₂ i b,
   { refine λ i, ⟨λ hP, _, λ hP₂, _⟩, 
@@ -259,7 +257,7 @@ begin
       rw if_neg not_top,
       have b_bot : is_bot_of b (P i) X := bot_of_not_top_of_extr (hyp i) not_top,
       simp [R],
-      rw function.update_noteq c_neq_b.symm (P i a + 1) (P i),
+      rw update_noteq c_neq_b.symm (P i a + 1) (P i),
       linarith [b_bot a a_in a_neq_b], },
     { intro hP₂,
       by_contradiction hP,

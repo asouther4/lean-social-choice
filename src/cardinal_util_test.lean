@@ -97,6 +97,20 @@ update p b $ (p a + p c) / 2
 
 variables {a b c d : σ} {p : σ → ℝ} {P : ι → σ → ℝ} {f : (ι → σ → ℝ) → σ → ℝ} {X : finset σ}
 
+lemma not_bot_of_top (h_top : is_top_of b p X) (h : ∃ a ∈ X, a ≠ b) : ¬ is_bot_of b p X :=
+begin
+  simp only [is_bot_of, not_forall, not_lt, exists_prop],
+  rcases h with ⟨a, a_in, hab⟩,
+  exact ⟨a, a_in, hab, (h_top a a_in hab).le⟩,
+end
+
+lemma not_top_of_bot (h_bot : is_bot_of b p X) (h : ∃ a ∈ X, a ≠ b) : ¬ is_top_of b p X :=
+begin
+  simp only [is_top_of, not_forall, not_lt, exists_prop],
+  rcases h with ⟨a, a_in, hab⟩,
+  exact ⟨a, a_in, hab, (h_bot a a_in hab).le⟩,
+end
+
 lemma top_of_not_bot_of_extr (hextr : is_extremal b p X) (not_bot : ¬ is_bot_of b p X) :
   is_top_of b p X := 
 hextr.resolve_left not_bot 
@@ -274,55 +288,37 @@ lemma second_step [fintype ι]
   ∃ n', is_pivotal f X n' b := 
 begin
   classical,
-  have X_ne : X.nonempty := card_pos.1 (by linarith),
-  suffices : 
-    ∀ D : finset ι, ∀ P : ι → σ → ℝ, D = {i ∈ univ | is_bot_of b (P i) X} → 
-      (∀ i : ι, is_extremal b (P i) X) → is_bot_of b (f P) X → ∃ n', is_pivotal f X n' b,
-  { let P : ι → σ → ℝ := λ i x, if x = b then 0 else 1,
-    let D : finset ι := {i ∈ univ | is_bot_of b (P i) X},
-    specialize this D P (by refl),
-    have h_bot : ∀ i : ι, is_bot_of b (P i) X,
-    { intros i a a_in a_neq_b,
-      simp only [P], simp only [P, if_true, eq_self_iff_true],
-      rw [if_neg a_neq_b], 
-      linarith, },
-    exact this (λ i, extremal_of_bot_of (h_bot i))
-      (social_bot_of_all_bot b_in hwp h_bot), },
+  suffices : ∀ D : finset ι, ∀ P : ι → σ → ℝ, D = {i ∈ univ | is_bot_of b (P i) X} → 
+    (∀ i, is_extremal b (P i) X) → is_bot_of b (f P) X → ∃ n', is_pivotal f X n' b,
+  { --let D : finset ι := {i ∈ univ | is_bot_of b (P i) X},
+    have h_bot : is_bot_of b (λ x, if x = b then 0 else 1) X := λ a _ hab, by simp [hab],
+    exact (this _ _ rfl) (λ i, extremal_of_bot_of h_bot) (social_bot_of_all_bot b_in hwp (λ i, h_bot)) },
 
-  intros D,
-  apply finset.induction_on D,
-  { intros P h_null h_extr bf_bot,
-    rw [eq_comm, eq_empty_iff_forall_not_mem] at h_null, 
-    simp only [true_and, sep_def, mem_filter, mem_univ] at h_null,
-    have bP_top : ∀ j, is_top_of b (P j) X := λ j, top_of_not_bot_of_extr (h_extr j) (h_null j),
-    have bf_top := social_top_of_all_top b_in hwp bP_top,
-    simp only at bf_top,
-    obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
-    linarith [bf_top a a_in a_neq_b,
-              bf_bot a a_in a_neq_b], },
-  { intros i s i_not_in ih P h_insert h_extr bf_bot,
+  refine λ D, finset.induction_on D 
+    (λ P h_null h_extr bf_bot, absurd 
+      (social_top_of_all_top b_in hwp (λ j, top_of_not_bot_of_extr (h_extr j) _)) 
+      (not_top_of_bot bf_bot (second_distinct_mem hX b_in))) 
+    (λ i s i_not_in ih P h_insert h_extr bf_bot, _),
+  { simpa using eq_empty_iff_forall_not_mem.mp h_null.symm j },
+  { have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
     let P' : ι → σ → ℝ := λ j, if j = i then maketop (P j) b X X_ne else P j,
-    have : i ∈ {j ∈ univ | is_bot_of b (P j) X}, { rw ← h_insert, exact mem_insert_self i s },
     have hP'_extr : ∀ i, is_extremal b (P' i) X,
     { intro j,
-        by_cases hj : j = i,
-        { right,
-          intros a a_in a_neq_b,
-          simp [P'],
-          rw if_pos hj,
-          exact lt_of_maketop (P j) a_neq_b X_ne a_in, },
-        { simp [P'],
-          rw if_neg hj,
-          exact h_extr j, }, },
+      by_cases hj : j = i,
+      { refine or.inr (λ a a_in a_neq_b, _),
+        simp [P'],
+        rw if_pos hj,
+        exact lt_of_maketop (P j) a_neq_b X_ne a_in, },
+      { simp [P'],
+        rw if_neg hj,
+        exact h_extr j, }, },
     by_cases hP' : is_top_of b (f P') X,
-    { use i, use P, use P',
-      refine ⟨_, h_extr, hP'_extr , _, _, bf_bot, hP'⟩,
-      { intros j hj x y x_in y_in,
-        simp [P', same_order],
+    { refine ⟨i, P, P', λ j hj x y x_in y_in, _, h_extr, hP'_extr, _, _, bf_bot, hP'⟩,
+      { simp [P', same_order],
         rw if_neg hj,
         simp only [iff_self, and_self], },
-      { simp only [true_and, sep_def, mem_filter, mem_univ] at this,
-        exact this, },
+      { have : i ∈ {j ∈ univ | is_bot_of b (P j) X}, { rw ← h_insert, exact mem_insert_self i s },
+        simpa only [true_and, sep_def, mem_filter, mem_univ] },
       { simp only [P'], 
         simp only [eq_self_iff_true, if_true],
         exact top_of_maketop b (P i) X_ne, }, },
@@ -486,3 +482,8 @@ lemma arrows_theorem [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
   is_dictatorship f X := 
 fourth_step hind hX $ second_step hwp hind hX
+
+example (p q :Prop) (h1 : p) (h2 : ¬ p) : q := false.rec q (h2 h1)
+example (p q :Prop) (h : false) : q := by library_search
+#check asymm
+#check false.rec_on

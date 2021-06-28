@@ -92,90 +92,83 @@ update p b $ (p a + p c) / 2
 
 ---- Preliminary Lemmas ----
 
-lemma maketop_noteq (a b : σ) (ha : a ≠ b) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
+variables {a b c d : σ} {p : σ → ℝ} {P : ι → σ → ℝ} {f : (ι → σ → ℝ) → σ → ℝ} {X : finset σ}
+
+lemma maketop_noteq (p) (hab : a ≠ b) (hX : X.nonempty) :
   maketop p b X hX a = p a := 
-update_noteq ha _ p
+update_noteq hab _ p
 
-lemma makebot_noteq (a b : σ) (ha : a ≠ b) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
+lemma makebot_noteq (p) (hab : a ≠ b) (hX : X.nonempty) :
   makebot p b X hX a = p a := 
-update_noteq ha _ p
+update_noteq hab _ p
 
-lemma makebetween_noteq (a b c d: σ) (hd : d ≠ b) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
+lemma makebetween_noteq (p) (hdb : d ≠ b) :
   makebetween p a b c d = p d :=
-update_noteq hd ((p a + p c) / 2) p
+update_noteq hdb ((p a + p c) / 2) p
 
-lemma makebetween_eq (a b c : σ) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
+lemma makebetween_eq (a b c : σ) (p) :
   makebetween p a b c b = (p a + p c) / 2 :=
 update_same _ _ _
 
 --should rename to `maketop_lt_maketop`
-lemma lt_of_maketop (a b : σ) (p : σ → ℝ) (a_neq : a ≠ b) (X : finset σ) (hX : X.nonempty)
-  (a_in : a ∈ X) : 
+lemma lt_of_maketop (p) (hab : a ≠ b) (hX : X.nonempty) (a_in : a ∈ X) : 
   maketop p b X hX a < maketop p b X hX b :=
-by simpa [maketop, a_neq] using 
+by simpa [maketop, hab] using 
   ((X.image p).le_max' _ (mem_image_of_mem p a_in)).trans_lt (lt_add_one _)
 
 --should rename to `makebot_lt_makebot`
-lemma lt_of_makebot (b c : σ) (p : σ → ℝ) (c_neq : c ≠ b) (X : finset σ) (hX : X.nonempty)
-  (c_in : c ∈ X) : 
+lemma lt_of_makebot (p) (hcb : c ≠ b) (hX : X.nonempty) (c_in : c ∈ X) : 
   makebot p b X hX b < makebot p b X hX c :=
-by simpa [makebot, c_neq] using sub_lt_iff_lt_add'.mpr 
+by simpa [makebot, hcb] using sub_lt_iff_lt_add'.mpr 
   (((X.image p).min'_le (p c) (mem_image_of_mem p c_in)).trans_lt (lt_one_add _))
 
 --should rename to `makebetween_lt_makebetween_top`
-lemma lt_top_of_makebetween (a b c : σ) (p : σ → ℝ) (c_neq : c ≠ b) (X : finset σ) (hX : X.nonempty) 
-  (hc : p a < p c) : 
+lemma lt_top_of_makebetween (hcb : c ≠ b) (hp : p a < p c) : 
   makebetween p a b c b < makebetween p a b c c :=
 begin
-  simp only [makebetween, update_same, update_noteq c_neq],
+  simp only [makebetween, update_same, update_noteq hcb],
   linarith,
 end
 
 --should rename to `makebetween_lt_makebetween_bot`
-lemma bot_lt_of_makebetween (a b c : σ) (p : σ → ℝ) (a_neq : a ≠ b ) (X : finset σ) (hX : X.nonempty)
-  (ha : p a < p c) : 
+lemma bot_lt_of_makebetween (hab : a ≠ b) (hp : p a < p c) : 
   makebetween p a b c a < makebetween p a b c b :=
 begin
-  simp only [makebetween, update_same, update_noteq a_neq],
+  simp only [makebetween, update_same, update_noteq hab],
   linarith,
 end
 
-lemma top_of_maketop (b : σ) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
+lemma top_of_maketop (b p) (hX : X.nonempty) :
   is_top_of b (maketop p b X hX) X := 
-λ a a_in a_ne_b, lt_of_maketop a b p a_ne_b X hX a_in
+λ a a_in hab, lt_of_maketop p hab hX a_in
 
-lemma top_of_not_bot_of_extr {b : σ} {p : σ → ℝ} {X : finset σ} 
-  (extr : is_extremal b p X) (not_bot : ¬ is_bot_of b p X) :
+lemma top_of_not_bot_of_extr (hextr : is_extremal b p X) (not_bot : ¬ is_bot_of b p X) :
   is_top_of b p X := 
-extr.resolve_left not_bot 
+hextr.resolve_left not_bot 
 
-lemma bot_of_not_top_of_extr {b : σ} {p : σ → ℝ} {X : finset σ} 
-  (extr : is_extremal b p X) (not_top : ¬ is_top_of b p X) :
+lemma bot_of_not_top_of_extr (hextr : is_extremal b p X) (not_top : ¬ is_top_of b p X) :
   is_bot_of b p X := 
-extr.resolve_right not_top 
+hextr.resolve_right not_top 
 
-lemma extremal_of_bot_of {b : σ} {p : σ → ℝ} {X : finset σ} 
-  (h_bot: is_bot_of b p X) : is_extremal b p X := by left; exact h_bot
+lemma extremal_of_bot_of (h_bot : is_bot_of b p X) : is_extremal b p X := 
+or.inl h_bot
 
-lemma social_top_of_all_top {f : (ι → σ → ℝ) → σ → ℝ} 
-  {X : finset σ} {P : ι → σ → ℝ} {b : σ} (b_in : b ∈ X)
-  (hf: weak_pareto f X) (hP : ∀ i : ι, is_top_of b (P i) X) : 
+lemma social_top_of_all_top (b_in : b ∈ X) (hf : weak_pareto f X) 
+  (hP : ∀ i : ι, is_top_of b (P i) X) : 
   is_top_of b (f P) X := 
-λ a a_in a_ne_b, hf a b a_in b_in P $ λ i, hP i a a_in a_ne_b 
+λ a a_in hab, hf a b a_in b_in P $ λ i, hP i a a_in hab
 
-lemma social_bot_of_all_bot {f : (ι → σ → ℝ) → σ → ℝ} 
-  {X : finset σ} {P : ι → σ → ℝ} {b : σ} (b_in : b ∈ X)
-  (hf: weak_pareto f X) (hP : ∀ i : ι, is_bot_of b (P i) X) : 
+lemma social_bot_of_all_bot (b_in : b ∈ X) (hf : weak_pareto f X) 
+  (hP : ∀ i : ι, is_bot_of b (P i) X) : 
   is_bot_of b (f P) X := 
-λ a a_in a_ne_b, hf b a b_in a_in P $ λ i, hP i a a_in a_ne_b
+λ a a_in hab, hf b a b_in a_in P $ λ i, hP i a a_in hab
 
-lemma second_distinct_mem {X : finset σ} {a : σ}
-  (hX : 3 ≤ X.card) (a_in : a ∈ X) : 
+lemma second_distinct_mem (hX : 3 ≤ X.card) (a_in : a ∈ X) : 
   ∃ b ∈ X, b ≠ a :=
 begin
   have hpos : 0 < (X.erase a).card,
   { rw card_erase_of_mem a_in,
-    have:= nat.pred_le_pred hX,
+    have := nat.pred_le_pred hX,
     rw (2: ℕ).pred_succ at this,
     linarith, },
   cases card_pos.mp hpos with b hb,
@@ -183,8 +176,7 @@ begin
   exact ⟨b, hb.2, hb.1⟩,
 end
 
-lemma third_distinct_mem {X : finset σ} {a b : σ}
-  (hX : 3 ≤ X.card) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
+lemma third_distinct_mem (hX : 3 ≤ X.card) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
   ∃ c ∈ X, c ≠ a ∧ c ≠ b :=
 begin
   have hpos : 0 < ((X.erase b).erase a).card,
@@ -195,16 +187,10 @@ begin
   exact ⟨c, hc.2.2, hc.1, hc.2.1⟩,
 end
 
----- The Proof --------
+-- ## The Proof
 
-
-variables {X : finset σ}
-
-lemma first_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card)
-  (b : σ) (b_in : b ∈ X) (P : ι → σ → ℝ)
-  (hyp : ∀ i : ι, is_extremal b (P i) X) :
+lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
+  (hX : 3 ≤ X.card) (b_in : b ∈ X) (hyp : ∀ i : ι, is_extremal b (P i) X) :
   is_extremal b (f P) X := 
 begin
   have X_ne : X.nonempty := card_pos.1 (by linarith),
@@ -230,7 +216,7 @@ begin
     { simp [P₂],
       rw if_pos b_top,
       simp [Q],
-      exact bot_lt_of_makebetween a c b (P i) a_neq_c X X_ne (b_top a a_in a_neq_b) },
+      exact bot_lt_of_makebetween a_neq_c (b_top a a_in a_neq_b) },
     { simp [P₂],
       rw if_neg b_top,
       simp [R],
@@ -239,7 +225,7 @@ begin
   have hPab : ∀ i : ι, P i a < P i b ↔ P₂ i a < P₂ i b,
   { refine λ i, ⟨λ hP, _, λ hP₂, _⟩, 
     { by_cases b_top : is_top_of b (P i) X; simp only [P₂, Q, R];
-        simpa [b_top, makebetween_noteq _ _ _ _ _ _ _ X_ne, a_neq_c, c_neq_b.symm] },
+        simpa [b_top, makebetween_noteq, a_neq_c, c_neq_b.symm] },
     { by_contradiction hP,
       have not_top : ¬ is_top_of b (P i) X,
       { by_contradiction b_top,
@@ -263,8 +249,7 @@ begin
       by_contradiction hP,
       have b_top : is_top_of b (P i) X := 
         top_of_not_bot_of_extr (hyp i) (λ b_bot, hP (b_bot c c_in c_neq_b)),
-      simp only [P₂, if_pos b_top, Q, makebetween_noteq a c b b c_neq_b.symm (P i) X X_ne,
-                makebetween_eq a c b (P i) X X_ne] at hP₂,
+      simp only [P₂, if_pos b_top, Q, makebetween_noteq _ c_neq_b.symm, makebetween_eq] at hP₂,
       linarith [b_top a a_in a_neq_b], }, },
   have h_iir₁ := (not_congr (hind a b a_in b_in P P₂ hPab)).mp (not_lt.mpr ha),
   have h_iir₂ := (not_congr (hind b c b_in c_in P P₂ hPbc)).mp (not_lt.mpr hc),
@@ -273,19 +258,16 @@ begin
 end    
 
 
-lemma second_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card) :
-  ∀ b ∈ X, ∃ n': ι, is_pivotal f X n' b := 
+lemma second_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
+  (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
+  ∃ n', is_pivotal f X n' b := 
 begin
-  intros b b_in, 
   have X_ne : X.nonempty := card_pos.1 (by linarith),
   suffices : 
-  ∀ D : finset ι, ∀ P : ι → σ → ℝ, D = {i ∈ univ | is_bot_of b (P i) X} → 
-    (∀ i : ι, is_extremal b (P i) X) → is_bot_of b (f P) X → ∃ n', is_pivotal f X n' b,
-  { let P : ι → σ → ℝ := λ i x,
-      if x = b then 0 else 1,
-    let D : finset ι := {i ∈ finset.univ | is_bot_of b (P i) X},
+    ∀ D : finset ι, ∀ P : ι → σ → ℝ, D = {i ∈ univ | is_bot_of b (P i) X} → 
+      (∀ i : ι, is_extremal b (P i) X) → is_bot_of b (f P) X → ∃ n', is_pivotal f X n' b,
+  { let P : ι → σ → ℝ := λ i x, if x = b then 0 else 1,
+    let D : finset ι := {i ∈ univ | is_bot_of b (P i) X},
     specialize this D P (by refl),
     have h_bot : ∀ i : ι, is_bot_of b (P i) X,
     { intros i a a_in a_neq_b,
@@ -322,7 +304,7 @@ begin
           intros a a_in a_neq_b,
           simp [P'],
           rw if_pos hj,
-          exact lt_of_maketop a b (P j) a_neq_b X X_ne a_in, },
+          exact lt_of_maketop (P j) a_neq_b X_ne a_in, },
         { simp [P'],
           rw if_neg hj,
           exact h_extr j, }, },
@@ -337,7 +319,7 @@ begin
         exact this, },
       { simp only [P'], 
         simp only [eq_self_iff_true, if_true],
-        exact top_of_maketop b (P i) X X_ne, }, },
+        exact top_of_maketop b (P i) X_ne, }, },
     { have hsP' : s = {i ∈ univ | is_bot_of b (P' i) X},
       { ext j, split,
         { intro hs,
@@ -357,24 +339,22 @@ begin
             
             rw [if_pos h, h] at hj,
             obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
-            linarith[(top_of_maketop b (P i) X X_ne) a a_in a_neq_b, 
+            linarith[(top_of_maketop b (P i) X_ne) a a_in a_neq_b, 
             hj a a_in a_neq_b], },
           rw [← erase_insert i_not_in, h_insert],
           rw if_neg i_neq_j at hj,
           simp only [true_and, sep_def, mem_filter, mem_univ, mem_erase, ne.def],
           exact ⟨i_neq_j, hj⟩, }, },
       specialize ih P' hsP' hP'_extr (bot_of_not_top_of_extr 
-        (first_step hwp hind hX b b_in P' hP'_extr) hP'),
+        (first_step hwp hind hX b_in hP'_extr) hP'),
       exact ih, }, }, 
 end
 
-lemma third_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card) :
-  ∀ b ∈ X, ∀ i : ι, is_pivotal f X i b →
+lemma third_step (hind : ind_of_irr_alts f X) 
+  (hX : 3 ≤ X.card) (b_in : b ∈ X) {i : ι} (i_piv : is_pivotal f X i b) :
   is_dictator_except f X i b :=
 begin
-  intros b b_in i i_piv a a_in c c_in a_neq_b c_neq_b Q hyp,
+  intros a a_in c c_in a_neq_b c_neq_b Q hyp,
   rcases i_piv with ⟨P, P', i_piv⟩,
   have X_ne : X.nonempty := card_pos.1 (by linarith),
   classical,
@@ -391,21 +371,21 @@ begin
   have Q'_eq : ∀ j : ι, ∀ d ≠ b, Q j d = Q' j d,
   { intros j d d_neq,
     by_cases hj : j = i,
-    { rw ← makebetween_noteq a b c d d_neq (Q j) X X_ne,
+    { rw ← makebetween_noteq (Q j) d_neq,
       simp [Q', R],
       rw if_pos hj, },
     { simp [Q'],
       rw if_neg hj,
       by_cases hbot : is_bot_of b (P j) X,
-      { rw [← makebot_noteq d b d_neq (Q j) X X_ne, if_pos hbot], },
-      { rw [← maketop_noteq d b d_neq (Q j) X X_ne, if_neg hbot], }, }, },
+      { rw [← makebot_noteq (Q j) d_neq X_ne, if_pos hbot], },
+      { rw [← maketop_noteq (Q j) d_neq X_ne, if_neg hbot], }, }, },
   have hQ'bc : ∀ j : ι, P j b < P j c ↔ Q' j b < Q' j c,
   { refine (λ j, ⟨λ hP, _, λ hQ', _⟩); by_cases hj : j = i,
     { simp [Q'],
       rw if_pos hj,
       simp [R],
       rw ← hj at hyp,
-      exact lt_top_of_makebetween a b c (Q j) c_neq_b X X_ne hyp, },
+      exact lt_top_of_makebetween c_neq_b hyp, },
     { simp [Q'],
       rw if_neg hj,
       have b_bot : is_bot_of b (P j) X,
@@ -416,20 +396,20 @@ begin
         { exact (h d d_in d_neq_b).not_le hd },
         { exact (irrefl _) ((h c c_in c_neq_b).trans hP) }, },
       rw if_pos b_bot,
-      exact lt_of_makebot b c (Q j) c_neq_b X X_ne c_in, },
+      exact lt_of_makebot (Q j) c_neq_b X_ne c_in, },
     { convert i_piv.2.2.2.1 c c_in c_neq_b },
       { by_contradiction hP, push_neg at hP,
         have not_bot : ¬ is_bot_of b (P j) X,
         { by_contradiction h,
           exact (h c c_in c_neq_b).not_le hP },
-        apply (asymm (lt_of_maketop c b (Q j) c_neq_b X X_ne c_in)),
+        apply asymm (lt_of_maketop (Q j) c_neq_b X_ne c_in),
         convert hQ'; simp [Q', if_neg, not_bot, hj] }, },
   have hQ'ab : ∀ j : ι, P' j a < P' j b ↔ Q' j a < Q' j b,
   { refine (λ j, ⟨λ hP', _, λ hQ', _⟩); by_cases hj : j = i,
     { simp [Q'],
       rw if_pos hj,
       rw ← hj at hyp,
-      exact bot_lt_of_makebetween a b c (Q j) a_neq_b X X_ne hyp, },
+      exact bot_lt_of_makebetween a_neq_b hyp, },
     { simp [Q'],
       rw if_neg hj,
       have not_bot : ¬ is_bot_of b (P j) X,
@@ -438,13 +418,13 @@ begin
         rw ← (i_piv.1 j hj a b a_in b_in).1 at hP',
         linarith, },
       rw if_neg not_bot,
-      linarith [lt_of_maketop a b (Q j) a_neq_b X X_ne a_in], },
+      linarith [lt_of_maketop (Q j) a_neq_b X_ne a_in], },
     { convert i_piv.2.2.2.2.1 a a_in a_neq_b, },
     { simp only at hQ', simp only [Q', dite_eq_ite, if_neg hj] at hQ',
       have not_bot : ¬ (is_bot_of b (P j) X),
       { by_contradiction b_bot, 
         rw if_pos b_bot at hQ',
-        linarith [lt_of_makebot b a (Q j) a_neq_b X X_ne a_in], },
+        linarith [lt_of_makebot (Q j) a_neq_b X_ne a_in], },
       rw if_neg not_bot at hQ',
       rw ← (i_piv.1 j hj a b a_in b_in).1,
       have b_top : is_top_of b (P j) X := top_of_not_bot_of_extr (i_piv.2.1 j) not_bot,
@@ -462,10 +442,8 @@ begin
   exact h₁.trans h₂,
 end
 
-lemma fourth_step {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card)
-  (h : ∀ b ∈ X, ∃ (n' : ι), is_pivotal f X n' b) : 
+lemma fourth_step (hind : ind_of_irr_alts f X)
+  (hX : 3 ≤ X.card) (h : ∀ b ∈ X, ∃ n', is_pivotal f X n' b) : 
   is_dictatorship f X := 
 begin
   have X_pos : 0 < X.card := by linarith,
@@ -476,7 +454,7 @@ begin
   { intros a a_in ha Pᵢ,
     obtain ⟨c, c_in, not_a, not_b⟩ := third_distinct_mem hX a_in b_in ha,
     obtain ⟨j, j_piv⟩ := h c c_in,
-    have j_dict := third_step hind hX c c_in j j_piv, 
+    have j_dict := third_step hind hX c_in j_piv, 
     have hij : i = j,
     { by_contra hij,
       rcases i_piv with ⟨R, R', hi₁, hi₂, hi₃, hi₄, hi₅, hi₆, hi₇⟩,
@@ -495,11 +473,9 @@ begin
   { exact ((irrefl _) hyp).rec _ },
   { exact (this y y_in hy.symm Pᵢ).2 hyp },
   { exact (this x x_in hx.symm Pᵢ).1 hyp },
-  { exact third_step hind hX b b_in i i_piv x x_in y y_in hx.symm hy.symm Pᵢ hyp },
+  { exact third_step hind hX b_in i_piv x x_in y y_in hx.symm hy.symm Pᵢ hyp },
 end
 
-lemma arrows_theorem {f : (ι → σ → ℝ) → (σ → ℝ)}
-  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card) :
+lemma arrows_theorem (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
   is_dictatorship f X := 
 fourth_step hind hX $ second_step hwp hind hX

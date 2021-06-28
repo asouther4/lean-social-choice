@@ -4,8 +4,7 @@ import data.set.basic
 open finset
 
 --we think of social states as type σ and inidividuals as type ι
-variables {σ ι : Type} [decidable_eq σ] [decidable_eq ι]
-variable [fintype ι]
+variables {σ ι : Type} [decidable_eq σ] [decidable_eq ι] [fintype ι]
 
 /-! 
 ## Notes
@@ -19,50 +18,49 @@ variable [fintype ι]
 
 /-- A social welfare function satisfies the Weak Pareto criterion if, for any two
   social states `x` and `y`, every individual ranking `y` higher than `x` implies
-  that society must rank `y` higher than `x`. -/
+  that society ranks `y` higher than `x`. -/
 def weak_pareto (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
-∀ (x ∈ X) (y ∈ X) (P : ι → σ → ℝ), (∀ i : ι, P i x < P i y) → (f P) x < (f P) y
+∀ (x y ∈ X) (P : ι → σ → ℝ), (∀ i : ι, P i x < P i y) → (f P) x < (f P) y
 
-/- Suppose in two utility functions
+/-- Suppose in two utility functions
   all individuals rank x and y in the exact same order 
   A social welfare function is Independent of Irrelevant Alternatives if two -/
 def ind_of_irr_alts (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
-∀ (x ∈ X) (y ∈ X) (P P' : ι → σ → ℝ), 
+∀ (x y ∈ X) (P P' : ι → σ → ℝ), 
   (∀ i : ι, P i x < P i y ↔ P' i x < P' i y) →
     (f P x < f P y ↔ f P' x < f P' y)
 
-/- A social welfare function is a dicatorship if a single individual i 
-  possesses the power to determine the group's ordering of any two social states. -/
+/-- A social welfare function is a *dicatorship* if a single individual `i` 
+  possesses the power to determine society's ordering of any two social states. -/
 def is_dictatorship (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop :=
 ∃ i : ι, ∀ (x y ∈ X) (P : ι → σ → ℝ), P i x < P i y → f P x < f P y
 
-/- A social state b is at the bottom of the set X with respect to the ranking p
-  if b is ranked strictly lower than every other a ∈ X. -/
+/-- A social state `b` is *at the bottom of* a finite set of social states `X` with 
+  respect to a ranking `p` if `b` is ranked strictly lower than every other `a ∈ X`. -/
 def is_bot_of (b : σ) (p : σ → ℝ) (X : finset σ) : Prop :=
 ∀ a ∈ X, a ≠ b → p b < p a
 
-/- A social state b is at the top of the set X with respect to the ranking p
-  if b is ranked strictly higher than every other a ∈ X. -/
-def is_top_of (b : σ) (p : σ → ℝ) (X : finset σ): Prop := 
+/-- A social state `b` is *at the top of* a finite set of social states `X` with 
+  respect to a ranking `p` if `b` is ranked strictly higher than every other `a ∈ X`. -/
+def is_top_of (b : σ) (p : σ → ℝ) (X : finset σ) : Prop := 
 ∀ a ∈ X, a ≠ b → p a < p b
 
-/- A social state b is exremal with respect to the set X the ranking p
-  if b is either at the bottom or the top. -/
+/-- A social state `b` is *extremal* with respect to a finite set of social states `X` 
+  and a ranking `p` if `b` is either at the bottom or the top of `X`. -/
 def is_extremal (b : σ) (p : σ → ℝ) (X : finset σ) : Prop := 
 is_bot_of b p X ∨ is_top_of b p X
 
-/- Social sates x, y, x', and y' are in the same order with respect to two rankings
-p and p' if x and y have the same ordering in p as x' and y' have in p'. -/
+/-- Social sates `x`, `y`, `x'`, and `y'` are in the *same order* with respect to two rankings 
+  `p` and `p'` if `x` and `y` have the same ordering in `p` as `x'` and `y'` have in `p'`. -/
 def same_order (p p' : σ → ℝ) (x y x' y' : σ) : Prop :=
 (p x < p y ↔ p' x' < p' y') ∧ (p y < p x ↔ p' y' < p' x')
 
-/- An individual i is pivotal over a social state b if we can find two
-    rankings P and P' with the following properties: 
-  
-  ⋆ all individuals except for i place all social states in the same order in both rankings
-  ⋆ all individuals (including i) place b in an extremal position in both rankings
-  ⋆ i places b at the bottom of her rankings in P, but the top of her rankigns in P'
-  ⋆ society places b at the bottom of its rankings in P, but the top of its rankings in P' -/
+/-- An individual `i` is *pivotal* with respect to a social state `b` if 
+  there exist rankings `P` and `P'` such that: 
+  ⋆ all individuals except for `i` rank all social states in the same order in both rankings
+  ⋆ all individuals place `b` in an extremal position in both rankings
+  ⋆ `i` ranks `b` at the bottom of their rankings in `P`, but the top of their rankigns in `P'`
+  ⋆ society ranks `b` at the bottom of its rankings in `P`, but the top of its rankings in `P'` -/
 def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ) 
   (i : ι) (b : σ) : Prop := 
 ∃ (P P' : ι → σ → ℝ),
@@ -70,26 +68,26 @@ def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ)
     (∀ i : ι, is_extremal b (P i) X) ∧ (∀ i : ι, is_extremal b (P' i) X) ∧
       (is_bot_of b (P i) X) ∧ (is_top_of b (P' i) X) ∧ (is_bot_of b (f P) X) ∧ (is_top_of b (f P') X)
 
-/- An individual is a dictator *except* for b if she is a dictator over every 
-  pair of alternatives distinct alternatives not equal to b.  -/
+/-- An individual is a dictator with respect to all social states in a given set *except* for `b` 
+  if they are a dictator over every pair of distinct alternatives not equal to `b`.  -/
 def is_dictator_except (f : (ι → σ → ℝ) → (σ → ℝ))
   (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∀ a ∈ X, ∀ c ∈ X, a ≠ b → c ≠ b → ∀ P : ι → σ → ℝ, P i a < P i c → f P a < f P c
 
 open classical
 
-/- Given an arbitary ranking p, `maketop b X` outputs a new ranking
-  which is the exact same as p except b is now placed at the top of the set X. -/
+/-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
+  `maketop b p X` updates `p` so that `b` now ranked at the top of `X`. -/
 noncomputable def maketop (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty): σ → ℝ :=
 function.update p b $ ((X.image p).max' (h.image p)) + 1
 
-/- Given an arbitary ranking p, `makebot b X` outputs a new ranking
-  which is the exact same as p except b is now placed at the bottom of the set X. -/
+/-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
+  `makebot b p X` updates `p` so that `b` now ranked at the bottom of `X`. -/
 noncomputable def makebot (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty): σ → ℝ :=
 function.update p b $ ((X.image p).min' (h.image p)) - 1
 
-/- Given an arbitary ranking p, `makebetween a b c` outputs a new ranking
-  which is the exact same as p except b is now ranked in the middle of a and c.  -/
+/-- Given an arbitary ranking `p` and social states `a`, `b`, and `c`, 
+  `makebetween p a b c` updates `p` so that `b` now ranked between `a` and `c`. -/
 noncomputable def makebetween (p : σ → ℝ) (a b c : σ) : σ → ℝ :=
 function.update p b $ (p a + p c) / 2
 
@@ -145,8 +143,8 @@ begin
 end
 
 lemma top_of_maketop (b : σ) (p : σ → ℝ) (X : finset σ) (hX : X.nonempty) :
-  is_top_of b (maketop p b X hX) X := λ a a_in a_neq_b, lt_of_maketop a b p a_neq_b X hX a_in
-
+  is_top_of b (maketop p b X hX) X := 
+λ a a_in a_ne_b, lt_of_maketop a b p a_ne_b X hX a_in
 
 lemma top_of_not_bot_of_extr {b : σ} {p : σ → ℝ} {X : finset σ} 
   (extr : is_extremal b p X) (not_bot : ¬ is_bot_of b p X) :
@@ -161,31 +159,20 @@ extr.resolve_right not_top
 lemma extremal_of_bot_of {b : σ} {p : σ → ℝ} {X : finset σ} 
   (h_bot: is_bot_of b p X) : is_extremal b p X := by left; exact h_bot
 
-
 lemma social_top_of_all_top {f : (ι → σ → ℝ) → σ → ℝ} 
   {X : finset σ} {P : ι → σ → ℝ} {b : σ} (b_in : b ∈ X)
   (hf: weak_pareto f X) (hP : ∀ i : ι, is_top_of b (P i) X) : 
   is_top_of b (f P) X := 
-begin
-  intros a a_in a_neq_b,
-  have hyp : ∀ i : ι, P i a < P i b := λ i, 
-    hP i a a_in a_neq_b,
-  exact hf a a_in b b_in P hyp,
-end
+λ a a_in a_ne_b, hf a b a_in b_in P $ λ i, hP i a a_in a_ne_b 
 
 lemma social_bot_of_all_bot {f : (ι → σ → ℝ) → σ → ℝ} 
   {X : finset σ} {P : ι → σ → ℝ} {b : σ} (b_in : b ∈ X)
   (hf: weak_pareto f X) (hP : ∀ i : ι, is_bot_of b (P i) X) : 
   is_bot_of b (f P) X := 
-begin
-  intros a a_in a_neq_b,
-  have hyp : ∀ i : ι, P i b < P i a := λ i, 
-    hP i a a_in a_neq_b,
-  exact hf b b_in a a_in P hyp,
-end
+λ a a_in a_ne_b, hf b a b_in a_in P $ λ i, hP i a a_in a_ne_b
 
 lemma second_distinct_mem {X : finset σ} {a : σ}
-  (hX : 3 ≤ X.card) (a_in : a ∈ X)  : 
+  (hX : 3 ≤ X.card) (a_in : a ∈ X) : 
   ∃ b ∈ X, b ≠ a :=
 begin
   have hpos : 0 < (X.erase a).card,
@@ -281,9 +268,9 @@ begin
       simp only [P₂, if_pos b_top, Q, makebetween_noteq a c b b c_neq_b.symm (P i) X X_ne,
                 makebetween_eq a c b (P i) X X_ne] at hP₂,
       linarith [b_top a a_in a_neq_b], }, },
-  have h_iir₁ := (not_congr (hind a a_in b b_in P P₂ hPab)).mp (not_lt.mpr ha),
-  have h_iir₂ := (not_congr (hind b b_in c c_in P P₂ hPbc)).mp (not_lt.mpr hc),
-  have h_pareto := hwp a a_in c c_in P₂ hP₂ac,
+  have h_iir₁ := (not_congr (hind a b a_in b_in P P₂ hPab)).mp (not_lt.mpr ha),
+  have h_iir₂ := (not_congr (hind b c b_in c_in P P₂ hPbc)).mp (not_lt.mpr hc),
+  have h_pareto := hwp a c a_in c_in P₂ hP₂ac,
   linarith,
 end    
 
@@ -295,9 +282,9 @@ lemma second_step {f : (ι → σ → ℝ) → (σ → ℝ)}
 begin
   intros b b_in, 
   have X_ne : X.nonempty := card_pos.1 (by linarith),
-  suffices: ∀ D : finset ι, ∀ P : ι → σ → ℝ, 
-          D = {i ∈ finset.univ | is_bot_of b (P i) X} → (∀ i : ι, is_extremal b (P i) X)
-          → is_bot_of b (f P) X → ∃ n' : ι, is_pivotal f X n' b,
+  suffices : 
+  ∀ D : finset ι, ∀ P : ι → σ → ℝ, D = {i ∈ univ | is_bot_of b (P i) X} → 
+    (∀ i : ι, is_extremal b (P i) X) → is_bot_of b (f P) X → ∃ n', is_pivotal f X n' b,
   { let P : ι → σ → ℝ := λ i x,
       if x = b then 0 else 1,
     let D : finset ι := {i ∈ finset.univ | is_bot_of b (P i) X},
@@ -467,12 +454,12 @@ begin
   have hQQ' : ∀ i : ι, Q i a < Q i c ↔ Q' i a < Q' i c,
   { intros i,
     rw [Q'_eq i a a_neq_b, Q'_eq i c c_neq_b], },
-  rw hind a a_in c c_in Q Q' hQQ', 
+  rw hind a c a_in c_in Q Q' hQQ', 
   have h₁ : f Q' a < f Q' b,
-  { rw ← (hind a a_in b b_in P' Q' hQ'ab),
+  { rw ← hind a b a_in b_in P' Q' hQ'ab,
     exact i_piv.2.2.2.2.2.2 a a_in a_neq_b, },
   have h₂ : f Q' b < f Q' c,
-  { rw ← (hind b b_in c c_in P Q' hQ'bc),
+  { rw ← hind b c b_in c_in P Q' hQ'bc,
     exact i_piv.2.2.2.2.2.1 c c_in c_neq_b, },
   exact h₁.trans h₂,
 end

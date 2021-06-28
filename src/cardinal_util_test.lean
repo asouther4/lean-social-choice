@@ -8,12 +8,19 @@ open finset
 variables {σ ι : Type} [decidable_eq σ] [decidable_eq ι]
 variable [fintype ι]
 
--- Important Definitions -- 
+/-! 
+## Notes
 
+* "All individuals rank" refers to the rankings of each and every individual. 
+* "Society ranks" refers to output of a social welfare function 
+  (e.g. the final result of an election process).
 
-/- A social welfare function satisfies the Weak Pareto Criterion if for any two
-  social states x and y, every individual ranks y higher than x
-  then society must rank y higher than x. -/
+## Important Definitions
+-/
+
+/-- A social welfare function satisfies the Weak Pareto criterion if, for any two
+  social states `x` and `y`, every individual ranking `y` higher than `x` implies
+  that society must rank `y` higher than `x`. -/
 def weak_pareto (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
 ∀ (x ∈ X) (y ∈ X) (P : ι → σ → ℝ), (∀ i : ι, P i x < P i y) → (f P) x < (f P) y
 

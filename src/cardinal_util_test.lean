@@ -4,7 +4,7 @@ import data.set.basic
 open finset
 
 --we think of social states as type σ and inidividuals as type ι
-variables {σ ι : Type} [decidable_eq σ] [decidable_eq ι] [fintype ι]
+variables {σ ι : Type}
 
 /-! 
 ## Notes
@@ -72,27 +72,58 @@ def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ) (i : �
 def is_dictator_except (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∀ a ∈ X, ∀ c ∈ X, a ≠ b → c ≠ b → ∀ P : ι → σ → ℝ, P i a < P i c → f P a < f P c
 
-open classical function
+open function
 
 /-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
   `maketop b p X` updates `p` so that `b` now ranked at the top of `X`. -/
-noncomputable def maketop (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty): σ → ℝ :=
+noncomputable def maketop [decidable_eq σ] 
+  (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty) : σ → ℝ :=
 update p b $ ((X.image p).max' (h.image p)) + 1
 
 /-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
   `makebot b p X` updates `p` so that `b` now ranked at the bottom of `X`. -/
-noncomputable def makebot (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty): σ → ℝ :=
+noncomputable def makebot [decidable_eq σ]
+  (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty) : σ → ℝ :=
 update p b $ ((X.image p).min' (h.image p)) - 1
 
 /-- Given an arbitary ranking `p` and social states `a`, `b`, and `c`, 
   `makebetween p a b c` updates `p` so that `b` now ranked between `a` and `c`. -/
-noncomputable def makebetween (p : σ → ℝ) (a b c : σ) : σ → ℝ :=
+noncomputable def makebetween [decidable_eq σ] 
+  (p : σ → ℝ) (a b c : σ) : σ → ℝ :=
 update p b $ (p a + p c) / 2
 
 
 -- ## Preliminary Lemmas
 
 variables {a b c d : σ} {p : σ → ℝ} {P : ι → σ → ℝ} {f : (ι → σ → ℝ) → σ → ℝ} {X : finset σ}
+
+lemma top_of_not_bot_of_extr (hextr : is_extremal b p X) (not_bot : ¬ is_bot_of b p X) :
+  is_top_of b p X := 
+hextr.resolve_left not_bot 
+
+lemma bot_of_not_top_of_extr (hextr : is_extremal b p X) (not_top : ¬ is_top_of b p X) :
+  is_bot_of b p X := 
+hextr.resolve_right not_top 
+
+lemma extremal_of_bot_of (h_bot : is_bot_of b p X) : is_extremal b p X := 
+or.inl h_bot
+
+lemma extremal_of_top_of (h_bot : is_top_of b p X) : is_extremal b p X := 
+or.inr h_bot
+
+lemma social_top_of_all_top (b_in : b ∈ X) (hf : weak_pareto f X) 
+  (hP : ∀ i : ι, is_top_of b (P i) X) : 
+  is_top_of b (f P) X := 
+λ a a_in hab, hf a b a_in b_in P $ λ i, hP i a a_in hab
+
+lemma social_bot_of_all_bot (b_in : b ∈ X) (hf : weak_pareto f X) 
+  (hP : ∀ i : ι, is_bot_of b (P i) X) : 
+  is_bot_of b (f P) X := 
+λ a a_in hab, hf b a b_in a_in P $ λ i, hP i a a_in hab
+
+section make
+
+variable [decidable_eq σ]
 
 lemma maketop_noteq (p) (hab : a ≠ b) (hX : X.nonempty) :
   maketop p b X hX a = p a := 
@@ -142,33 +173,12 @@ lemma top_of_maketop (b p) (hX : X.nonempty) :
   is_top_of b (maketop p b X hX) X := 
 λ a a_in hab, lt_of_maketop p hab hX a_in
 
-lemma top_of_not_bot_of_extr (hextr : is_extremal b p X) (not_bot : ¬ is_bot_of b p X) :
-  is_top_of b p X := 
-hextr.resolve_left not_bot 
-
-lemma bot_of_not_top_of_extr (hextr : is_extremal b p X) (not_top : ¬ is_top_of b p X) :
-  is_bot_of b p X := 
-hextr.resolve_right not_top 
-
-lemma extremal_of_bot_of (h_bot : is_bot_of b p X) : is_extremal b p X := 
-or.inl h_bot
-
-lemma extremal_of_top_of (h_bot : is_top_of b p X) : is_extremal b p X := 
-or.inr h_bot
-
-lemma social_top_of_all_top (b_in : b ∈ X) (hf : weak_pareto f X) 
-  (hP : ∀ i : ι, is_top_of b (P i) X) : 
-  is_top_of b (f P) X := 
-λ a a_in hab, hf a b a_in b_in P $ λ i, hP i a a_in hab
-
-lemma social_bot_of_all_bot (b_in : b ∈ X) (hf : weak_pareto f X) 
-  (hP : ∀ i : ι, is_bot_of b (P i) X) : 
-  is_bot_of b (f P) X := 
-λ a a_in hab, hf b a b_in a_in P $ λ i, hP i a a_in hab
+end make
 
 lemma second_distinct_mem (hX : 3 ≤ X.card) (a_in : a ∈ X) : 
   ∃ b ∈ X, b ≠ a :=
 begin
+  classical,
   have hpos : 0 < (X.erase a).card,
   { rw card_erase_of_mem a_in,
     exact zero_le_one.trans_lt (nat.pred_le_pred hX) },
@@ -180,6 +190,7 @@ end
 lemma third_distinct_mem (hX : 3 ≤ X.card) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
   ∃ c ∈ X, c ≠ a ∧ c ≠ b :=
 begin
+  classical,
   have hpos : 0 < ((X.erase b).erase a).card,
   { simpa only [card_erase_of_mem, mem_erase_of_ne_of_mem h a_in, b_in]
       using nat.pred_le_pred (nat.pred_le_pred hX) }, 
@@ -257,11 +268,12 @@ begin
   linarith,
 end    
 
-
-lemma second_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
+lemma second_step [fintype ι]
+  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
   ∃ n', is_pivotal f X n' b := 
 begin
+  classical,
   have X_ne : X.nonempty := card_pos.1 (by linarith),
   suffices : 
     ∀ D : finset ι, ∀ P : ι → σ → ℝ, D = {i ∈ univ | is_bot_of b (P i) X} → 
@@ -470,8 +482,7 @@ begin
   { exact third_step hind hX b_in i_piv x x_in y y_in hx.symm hy.symm Pᵢ hyp },
 end
 
-lemma arrows_theorem (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
+lemma arrows_theorem [fintype ι]
+  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
   is_dictatorship f X := 
 fourth_step hind hX $ second_step hwp hind hX
-
-#lint

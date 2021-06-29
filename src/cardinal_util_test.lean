@@ -3,8 +3,8 @@ import data.set.basic
 
 open finset
 
---we think of social states as type σ and inidividuals as type ι
-variables {σ ι : Type}
+-- We think of social states as type `σ` and inidividuals as type `ι`
+variables {σ ι : Type*}
 
 /-! 
 ## Notes
@@ -12,6 +12,7 @@ variables {σ ι : Type}
 * "All individuals rank" refers to the rankings of each and every individual. 
 * "Society ranks" refers to output of a social welfare function 
   (e.g. the final result of an election process).
+* <Andrew: Can you please write something describing what a social welfare function is? Thanks!>
 
 ## Important Definitions
 -/
@@ -22,10 +23,9 @@ variables {σ ι : Type}
 def weak_pareto (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (P : ι → σ → ℝ), (∀ i : ι, P i x < P i y) → (f P) x < (f P) y
 
-/-- Suppose every voter's ordering of X and Y remains unchanged between two 
-  rankings `P` and `P'`. We say that a social welfare function is 
-  Independent of Irrelevant Alternatives if the group's ordering of X and Y
-  remains unchanged too. -/
+/-- Suppose that every individual's ranking of `X` and `Y` remains unchanged between two rankings `P` 
+  and `P'`. We say that a social welfare function is *independent of irrelevant alternatives* if 
+  society's ranking of `X` and `Y` also remains unchanged between `P` and `P'`. -/
 def ind_of_irr_alts (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (P P' : ι → σ → ℝ), 
   (∀ i : ι, P i x < P i y ↔ P' i x < P' i y) → (f P x < f P y ↔ f P' x < f P' y)
@@ -59,7 +59,7 @@ def same_order (p p' : σ → ℝ) (x y x' y' : σ) : Prop :=
   there exist rankings `P` and `P'` such that: 
   ⋆ all individuals except for `i` rank all social states in the same order in both rankings
   ⋆ all individuals place `b` in an extremal position in both rankings
-  ⋆ `i` ranks `b` at the bottom of their rankings in `P`, but the top of their rankigns in `P'`
+  ⋆ `i` ranks `b` at the bottom of their rankings in `P`, but the top of their rankings in `P'`
   ⋆ society ranks `b` at the bottom of its rankings in `P`, but the top of its rankings in `P'` -/
 def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∃ (P P' : ι → σ → ℝ),
@@ -76,19 +76,19 @@ def is_dictator_except (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ
 open function
 
 /-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
-  `maketop b p X` updates `p` so that `b` now ranked at the top of `X`. -/
+  `maketop b p X` updates `p` so that `b` is now ranked at the top of `X`. -/
 noncomputable def maketop [decidable_eq σ] 
   (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty) : σ → ℝ :=
 update p b $ ((X.image p).max' (h.image p)) + 1
 
 /-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
-  `makebot b p X` updates `p` so that `b` now ranked at the bottom of `X`. -/
+  `makebot b p X` updates `p` so that `b` is now ranked at the bottom of `X`. -/
 noncomputable def makebot [decidable_eq σ]
   (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty) : σ → ℝ :=
 update p b $ ((X.image p).min' (h.image p)) - 1
 
 /-- Given an arbitary ranking `p` and social states `a`, `b`, and `c`, 
-  `makebetween p a b c` updates `p` so that `b` now ranked between `a` and `c`. -/
+  `makebetween p a b c` updates `p` so that `b` is now ranked between `a` and `c`. -/
 noncomputable def makebetween [decidable_eq σ] 
   (p : σ → ℝ) (a b c : σ) : σ → ℝ :=
 update p b $ (p a + p c) / 2
@@ -348,9 +348,8 @@ begin
           rw if_neg i_neq_j at hj,
           simp only [true_and, sep_def, mem_filter, mem_univ, mem_erase, ne.def],
           exact ⟨i_neq_j, hj⟩, }, },
-      specialize ih P' hsP' hP'_extr (bot_of_not_top_of_extr 
-        (first_step hwp hind hX b_in hP'_extr) hP'),
-      exact ih, }, }, 
+      exact ih P' hsP' hP'_extr (bot_of_not_top_of_extr 
+        (first_step hwp hind hX b_in hP'_extr) hP') }, }, 
 end
 
 lemma third_step (hind : ind_of_irr_alts f X) 
@@ -483,8 +482,3 @@ lemma arrows_theorem [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
   is_dictatorship f X := 
 fourth_step hind hX $ second_step hwp hind hX
-
-example (p q :Prop) (h1 : p) (h2 : ¬ p) : q := false.rec q (h2 h1)
-example (p q :Prop) (h : false) : q := by library_search
-#check asymm
-#check false.rec_on

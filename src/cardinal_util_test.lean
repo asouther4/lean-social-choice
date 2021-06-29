@@ -217,7 +217,7 @@ end
 -- ## The Proof
 
 lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card) (b_in : b ∈ X) (hyp : ∀ i : ι, is_extremal b (P i) X) :
+  (hX : 3 ≤ X.card) (b_in : b ∈ X) (hyp : ∀ i, is_extremal b (P i) X) :
   is_extremal b (f P) X := 
 begin
   by_contradiction hnot,
@@ -283,6 +283,8 @@ begin
   linarith,
 end    
 
+--let D : finset ι := {i ∈ univ | is_bot_of b (P i) X},
+--let P' := λ j, if j = i then maketop (P j) b X X_ne else P j,
 lemma second_step [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
@@ -291,10 +293,8 @@ begin
   classical,
   suffices : ∀ D : finset ι, ∀ P : ι → σ → ℝ, D = {i ∈ univ | is_bot_of b (P i) X} → 
     (∀ i, is_extremal b (P i) X) → is_bot_of b (f P) X → ∃ n', is_pivotal f X n' b,
-  { --let D : finset ι := {i ∈ univ | is_bot_of b (P i) X},
-    have h_bot : is_bot_of b (λ x, if x = b then 0 else 1) X := λ a _ hab, by simp [hab],
+  { have h_bot : is_bot_of b (λ x, ite (x = b) 0 1) X := λ a _ hab, by simp [hab],
     exact (this _ _ rfl) (λ i, extremal_of_bot_of h_bot) (social_bot_of_all_bot b_in hwp (λ i, h_bot)) },
-
   refine λ D, finset.induction_on D 
     (λ P h_null h_extr bf_bot, absurd 
       (social_top_of_all_top b_in hwp (λ j, top_of_not_bot_of_extr (h_extr j) _)) 
@@ -302,54 +302,37 @@ begin
     (λ i s i_not_in ih P h_insert h_extr bf_bot, _),
   { simpa using eq_empty_iff_forall_not_mem.mp h_null.symm j },
   { have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
-    let P' : ι → σ → ℝ := λ j, if j = i then maketop (P j) b X X_ne else P j,
-    have hP'_extr : ∀ i, is_extremal b (P' i) X,
+    have h_extr' : ∀ j, is_extremal b (ite (j = i) (maketop (P j) b X X_ne) (P j)) X,
     { intro j,
-      by_cases hj : j = i,
-      { refine or.inr (λ a a_in a_neq_b, _),
-        simp [P'],
-        rw if_pos hj,
-        exact lt_of_maketop (P j) a_neq_b X_ne a_in, },
-      { simp [P'],
-        rw if_neg hj,
-        exact h_extr j, }, },
-    by_cases hP' : is_top_of b (f P') X,
-    { refine ⟨i, P, P', λ j hj x y x_in y_in, _, h_extr, hP'_extr, _, _, bf_bot, hP'⟩,
-      { simp [P', same_order],
-        rw if_neg hj,
-        simp only [iff_self, and_self], },
+      by_cases hji : j = i,
+      { refine or.inr (λ a a_in hab, _),
+        simp only [if_pos hji, lt_of_maketop _ hab X_ne a_in] },
+      { simp only [if_neg hji, h_extr j] } },
+    by_cases hP' : is_top_of b (f (λ j, ite (j = i) (maketop (P j) b X X_ne) (P j))) X,
+    { refine ⟨i, P, _, λ j hj x y _ _, _, h_extr, h_extr', _, _, bf_bot, hP'⟩,
+      { simp [same_order, if_neg hj] },
       { have : i ∈ {j ∈ univ | is_bot_of b (P j) X}, { rw ← h_insert, exact mem_insert_self i s },
-        simpa only [true_and, sep_def, mem_filter, mem_univ] },
-      { simp only [P'], 
-        simp only [eq_self_iff_true, if_true],
-        exact top_of_maketop b (P i) X_ne, }, },
-    { have hsP' : s = {i ∈ univ | is_bot_of b (P' i) X},
-      { ext j, split,
-        { intro hs,
-          have hj : ¬ j = i := by by_contradiction hj; rw hj at hs;
-            exact i_not_in hs,
-          simp only [P', true_and, sep_def, mem_filter, mem_univ],
-          rw if_neg hj,
-          suffices hj_insert : j ∈ insert i s,
-          { rw h_insert at hj_insert,
-            simp only [P', true_and, sep_def, mem_filter, mem_univ] at hj_insert,
-            exact hj_insert },
-          exact mem_insert_of_mem hs, },
-        { intro hj,
-          simp only [P', true_and, sep_def, mem_filter, mem_univ] at hj,
-          have i_neq_j : ¬ j = i,
-          { by_contradiction,
-            
-            rw [if_pos h, h] at hj,
-            obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
-            linarith[(top_of_maketop b (P i) X_ne) a a_in a_neq_b, 
-            hj a a_in a_neq_b], },
-          rw [← erase_insert i_not_in, h_insert],
-          rw if_neg i_neq_j at hj,
-          simp only [true_and, sep_def, mem_filter, mem_univ, mem_erase, ne.def],
-          exact ⟨i_neq_j, hj⟩, }, },
-      exact ih P' hsP' hP'_extr (bot_of_not_top_of_extr 
-        (first_step hwp hind hX b_in hP'_extr) hP') }, }, 
+        simpa },
+      { simp [top_of_maketop, X_ne], }, },
+    { refine ih _ _ h_extr' (bot_of_not_top_of_extr (first_step hwp hind hX b_in h_extr') hP'),
+      ext j, 
+      simp only [true_and, sep_def, mem_filter, mem_univ],
+      split; intro hj,
+      { suffices : j ∈ insert i s, 
+        { have hji : j ≠ i, 
+          { by_contra hji,
+            rw not_not.mp hji at hj,
+            exact i_not_in hj },
+          rw h_insert at this, 
+          simpa [hji] },
+        exact mem_insert_of_mem hj },
+      { have hji : j ≠ i,
+        { by_contra hji,
+          obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
+          apply asymm (top_of_maketop b (P i) X_ne a a_in a_neq_b),
+          simpa [not_not.mp hji] using hj a a_in a_neq_b },
+        rw [← erase_insert i_not_in, h_insert],
+        simpa [hji] using hj } } }, 
 end
 
 lemma third_step (hind : ind_of_irr_alts f X) 

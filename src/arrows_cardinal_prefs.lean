@@ -217,89 +217,66 @@ end
 -- ## The Proof
 
 lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card) (b_in : b ∈ X) (hyp : ∀ i, is_extremal b (P i) X) :
+  (hX : 3 ≤ X.card) (b_in : b ∈ X) (hextr : ∀ i, is_extremal b (P i) X) :
   is_extremal b (f P) X := 
 begin
   by_contradiction hnot,
-  simp only [is_extremal, is_bot_of, is_top_of] at hnot,
+  dsimp only [is_extremal, is_bot_of, is_top_of] at hnot,
   push_neg at hnot,
-  have : ∃ t u : σ, t ∈ X ∧ u ∈ X ∧ t ≠ b ∧ u ≠ b ∧ t ≠ u ∧ f P b ≤ f P t ∧ f P u ≤ f P b, -- I changed the variables becuase I found them confusing -Ben
-  { obtain ⟨⟨c, c_in, c_neq_b, hc⟩, ⟨a, a_in, a_neq_b, ha⟩⟩ := hnot,
+  have h : ∃ t u : σ, t ∈ X ∧ u ∈ X ∧ t ≠ b ∧ u ≠ b ∧ t ≠ u ∧ f P b ≤ f P t ∧ f P u ≤ f P b, -- I changed the variables becuase I found them confusing -Ben
+  { obtain ⟨⟨c, c_in, hcb, hc⟩, ⟨a, a_in, hab, ha⟩⟩ := hnot,
     by_cases hac : a = c,
-    { obtain ⟨d, d_in, d_neq_a, d_neq_b⟩ := third_distinct_mem hX a_in b_in a_neq_b,
+    { obtain ⟨d, d_in, hda, hdb⟩ := third_distinct_mem hX a_in b_in hab,
       by_cases hd : f P b < f P d,
-      { exact ⟨d, c, d_in, c_in, d_neq_b, c_neq_b, ne_of_ne_of_eq d_neq_a hac, hd.le, hc⟩, },
-      { exact ⟨a, d, a_in, d_in, a_neq_b, d_neq_b, d_neq_a.symm, ha, not_lt.mp hd⟩, }, },
-    { exact ⟨a, c, a_in, c_in, a_neq_b, c_neq_b, hac, ha, hc⟩, }, },
+      { exact ⟨d, c, d_in, c_in, hdb, hcb, ne_of_ne_of_eq hda hac, hd.le, hc⟩, },
+      { exact ⟨a, d, a_in, d_in, hab, hdb, hda.symm, ha, not_lt.mp hd⟩, }, },
+    { exact ⟨a, c, a_in, c_in, hab, hcb, hac, ha, hc⟩, }, },
   classical,
-  rcases this with ⟨a, c, a_in, c_in, a_neq_b, c_neq_b, a_neq_c, ha, hc ⟩,
-  let Q : ι → σ → ℝ := λ j, makebetween (P j) a c b,
-  let R : ι → σ → ℝ := λ j, update (P j) c (P j a + 1),
-  let P₂ : ι → σ → ℝ := λ j, if is_top_of b (P j) X then Q j else R j,
-  have hP₂ac : ∀ i : ι, P₂ i a < P₂ i c,
+  obtain ⟨a, c, a_in, c_in, hab, hcb, hac, ha, hc⟩ := h,
+  let P₂ := λ j, if is_top_of b (P j) X then makebetween (P j) a c b else update (P j) c (P j a + 1),
+  have hP₂ac : ∀ i, P₂ i a < P₂ i c,
   { intros i,
-    by_cases b_top : is_top_of b (P i) X,
-    { simp [P₂],
-      rw if_pos b_top,
-      simp [Q],
-      exact bot_lt_of_makebetween a_neq_c (b_top a a_in a_neq_b) },
-    { simp [P₂],
-      rw if_neg b_top,
-      simp [R],
-      rw update_noteq a_neq_c (P i a + 1),
-      linarith, }, },
-  have hPab : ∀ i : ι, P i a < P i b ↔ P₂ i a < P₂ i b,
-  { refine λ i, ⟨λ hP, _, λ hP₂, _⟩, 
-    { by_cases b_top : is_top_of b (P i) X; simp only [P₂, Q, R];
-        simpa [b_top, makebetween_noteq, a_neq_c, c_neq_b.symm] },
-    { by_contradiction hP,
-      have not_top : ¬ is_top_of b (P i) X,
-      { by_contradiction b_top,
-        exact hP (b_top a a_in a_neq_b), },
-      simp only at hP₂, simp [P₂, if_neg not_top, R, a_neq_c, c_neq_b.symm] at hP₂,
+    by_cases h : is_top_of b (P i) X,
+    { simp [P₂, if_pos h, bot_lt_of_makebetween hac (h a a_in hab)] },
+    { simp [P₂, if_neg h, hac] }, },
+  have hPab : ∀ i, P i a < P i b ↔ P₂ i a < P₂ i b,
+  { simp only [P₂],
+    refine λ i, ⟨λ hP, _, λ hP₂, _⟩, 
+    { by_cases h : is_top_of b (P i) X; simpa [h, makebetween_noteq, hac, hcb.symm] },
+    { by_contra hP,
+      have h : ¬ is_top_of b (P i) X := λ b_top, hP (b_top a a_in hab),
+      simp only at hP₂, simp [if_neg h, hac, hcb.symm] at hP₂,
       exact hP hP₂ }, },
-  have hPbc : ∀ i : ι, P i b < P i c ↔ P₂ i b < P₂ i c, 
-  { intros i,
-    split,
-    { intro hP, 
-      have not_top : ¬ is_top_of b (P i) X,
-      { by_contradiction b_top,
-        linarith [b_top c c_in c_neq_b], },
-      simp [P₂],
-      rw if_neg not_top,
-      have b_bot : is_bot_of b (P i) X := bot_of_not_top_of_extr (hyp i) not_top,
-      simp [R],
-      rw update_noteq c_neq_b.symm (P i a + 1) (P i),
-      linarith [b_bot a a_in a_neq_b], },
-    { intro hP₂,
-      by_contradiction hP,
-      have b_top : is_top_of b (P i) X := 
-        top_of_not_bot_of_extr (hyp i) (λ b_bot, hP (b_bot c c_in c_neq_b)),
-      simp only [P₂, if_pos b_top, Q, makebetween_noteq _ c_neq_b.symm, makebetween_eq] at hP₂,
-      linarith [b_top a a_in a_neq_b], }, },
+  have hPbc : ∀ i, P i b < P i c ↔ P₂ i b < P₂ i c, 
+  { simp only [P₂],
+    refine λ i, ⟨λ hP, _, λ hP₂, _⟩,
+    { have h : ¬ is_top_of b (P i) X := λ b_top, asymm hP (b_top c c_in hcb),
+      convert lt_add_of_lt_of_pos (bot_of_not_top_of_extr (hextr i) h a a_in hab) _; 
+        simp [h, hcb.symm] },
+    { by_contradiction hP,
+      have h : is_top_of b (P i) X := top_of_not_bot_of_extr (hextr i) (λ h, hP (h c c_in hcb)),
+      simp only at hP₂, simp only [if_pos h, makebetween_noteq _ hcb.symm, makebetween_eq] at hP₂,
+      linarith [h a a_in hab], }, },
   have h_iir₁ := (not_congr (hind a b a_in b_in P P₂ hPab)).mp (not_lt.mpr ha),
   have h_iir₂ := (not_congr (hind b c b_in c_in P P₂ hPbc)).mp (not_lt.mpr hc),
   have h_pareto := hwp a c a_in c_in P₂ hP₂ac,
   linarith,
 end    
 
---let D : finset ι := {i ∈ univ | is_bot_of b (P i) X},
---let P' := λ j, if j = i then maketop (P j) b X X_ne else P j,
-lemma second_step [fintype ι]
+-- let `D := {i ∈ univ | is_bot_of b (P i) X}`
+-- let `P' := λ j, if j = i then maketop (P j) b X X_ne else P j`
+lemma second_step_aux [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
-  ∃ n', is_pivotal f X n' b := 
+  (hX : 3 ≤ X.card) (b_in : b ∈ X) :
+  ∀ {D : finset ι} {P : ι → σ → ℝ}, D = {i ∈ univ | is_bot_of b (P i) X} → 
+    (∀ i, is_extremal b (P i) X) → is_bot_of b (f P) X → ∃ n', is_pivotal f X n' b := 
 begin
   classical,
-  suffices : ∀ D : finset ι, ∀ P : ι → σ → ℝ, D = {i ∈ univ | is_bot_of b (P i) X} → 
-    (∀ i, is_extremal b (P i) X) → is_bot_of b (f P) X → ∃ n', is_pivotal f X n' b,
-  { have h_bot : is_bot_of b (λ x, ite (x = b) 0 1) X := λ a _ hab, by simp [hab],
-    exact (this _ _ rfl) (λ i, extremal_of_bot_of h_bot) (social_bot_of_all_bot b_in hwp (λ i, h_bot)) },
-  refine λ D, finset.induction_on D 
+  refine λ D', finset.induction_on D'
     (λ P h_null h_extr bf_bot, absurd 
       (social_top_of_all_top b_in hwp (λ j, top_of_not_bot_of_extr (h_extr j) _)) 
       (not_top_of_bot bf_bot (second_distinct_mem hX b_in))) 
-    (λ i s i_not_in ih P h_insert h_extr bf_bot, _),
+    (λ i D i_not_in ih P h_insert h_extr bf_bot, _),
   { simpa using eq_empty_iff_forall_not_mem.mp h_null.symm j },
   { have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
     have h_extr' : ∀ j, is_extremal b (ite (j = i) (maketop (P j) b X X_ne) (P j)) X,
@@ -311,28 +288,38 @@ begin
     by_cases hP' : is_top_of b (f (λ j, ite (j = i) (maketop (P j) b X X_ne) (P j))) X,
     { refine ⟨i, P, _, λ j hj x y _ _, _, h_extr, h_extr', _, _, bf_bot, hP'⟩,
       { simp [same_order, if_neg hj] },
-      { have : i ∈ {j ∈ univ | is_bot_of b (P j) X}, { rw ← h_insert, exact mem_insert_self i s },
+      { have : i ∈ {j ∈ univ | is_bot_of b (P j) X}, { rw ← h_insert, exact mem_insert_self i D },
         simpa },
-      { simp [top_of_maketop, X_ne], }, },
-    { refine ih _ _ h_extr' (bot_of_not_top_of_extr (first_step hwp hind hX b_in h_extr') hP'),
+      { simp [top_of_maketop, X_ne] } },
+    { refine ih _ h_extr' (bot_of_not_top_of_extr (first_step hwp hind hX b_in h_extr') hP'),
       ext j, 
       simp only [true_and, sep_def, mem_filter, mem_univ],
       split; intro hj,
-      { suffices : j ∈ insert i s, 
+      { suffices : j ∈ insert i D, 
         { have hji : j ≠ i, 
-          { by_contra hji,
-            rw not_not.mp hji at hj,
+          { rintro rfl, 
             exact i_not_in hj },
           rw h_insert at this, 
           simpa [hji] },
         exact mem_insert_of_mem hj },
       { have hji : j ≠ i,
-        { by_contra hji,
-          obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
-          apply asymm (top_of_maketop b (P i) X_ne a a_in a_neq_b),
-          simpa [not_not.mp hji] using hj a a_in a_neq_b },
+        { rintro rfl,
+          obtain ⟨a, a_in, hab⟩ := second_distinct_mem hX b_in,
+          apply asymm (top_of_maketop b (P j) X_ne a a_in hab),
+          simpa using hj a a_in hab },
         rw [← erase_insert i_not_in, h_insert],
         simpa [hji] using hj } } }, 
+end 
+
+lemma second_step [fintype ι]
+  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
+  (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
+  ∃ n', is_pivotal f X n' b := 
+begin
+  classical,
+  have h_bot : is_bot_of b (λ x, ite (x = b) 0 1) X := λ _ _ h, by simp [h],
+  exact second_step_aux hwp hind hX b_in rfl (λ i, extremal_of_bot_of h_bot) 
+    (social_bot_of_all_bot b_in hwp (λ i, h_bot)),
 end
 
 lemma third_step (hind : ind_of_irr_alts f X) 
@@ -343,32 +330,28 @@ begin
   rcases i_piv with ⟨P, P', i_piv⟩,
   have X_ne : X.nonempty := card_pos.1 (by linarith),
   classical,
-  let R : ι → σ → ℝ := λ j, (makebetween (Q j) a b c),
-  let S : ι → σ → ℝ := λ j, makebot (Q j) b X X_ne,
-  let T : ι → σ → ℝ := λ j, maketop (Q j) b X X_ne,
-  let Q' : ι → σ → ℝ := λ j, 
+  let Q' := λ j, 
     if hx : j = i 
-      then R j
+      then makebetween (Q j) a b c
     else 
       if is_bot_of b (P j) X 
-        then S j 
-      else T j,
-  have Q'_eq : ∀ j : ι, ∀ d ≠ b, Q j d = Q' j d,
+        then makebot (Q j) b X X_ne
+      else maketop (Q j) b X X_ne,
+  have Q'_eq : ∀ j, ∀ d ≠ b, Q j d = Q' j d,
   { intros j d d_neq,
     by_cases hj : j = i,
     { rw ← makebetween_noteq (Q j) d_neq,
-      simp [Q', R],
+      simp [Q'],
       rw if_pos hj, },
     { simp [Q'],
       rw if_neg hj,
       by_cases hbot : is_bot_of b (P j) X,
       { rw [← makebot_noteq (Q j) d_neq X_ne, if_pos hbot], },
       { rw [← maketop_noteq (Q j) d_neq X_ne, if_neg hbot], }, }, },
-  have hQ'bc : ∀ j : ι, P j b < P j c ↔ Q' j b < Q' j c,
+  have hQ'bc : ∀ j, P j b < P j c ↔ Q' j b < Q' j c,
   { refine (λ j, ⟨λ hP, _, λ hQ', _⟩); by_cases hj : j = i,
     { simp [Q'],
       rw if_pos hj,
-      simp [R],
       rw ← hj at hyp,
       exact lt_top_of_makebetween c_neq_b hyp, },
     { simp [Q'],
@@ -384,12 +367,10 @@ begin
       exact lt_of_makebot (Q j) c_neq_b X_ne c_in, },
     { convert i_piv.2.2.2.1 c c_in c_neq_b },
       { by_contradiction hP, push_neg at hP,
-        have not_bot : ¬ is_bot_of b (P j) X,
-        { by_contradiction h,
-          exact (h c c_in c_neq_b).not_le hP },
+        have not_bot : ¬ is_bot_of b (P j) X := λ h, (h c c_in c_neq_b).not_le hP,
         apply asymm (lt_of_maketop (Q j) c_neq_b X_ne c_in),
         convert hQ'; simp [Q', if_neg, not_bot, hj] }, },
-  have hQ'ab : ∀ j : ι, P' j a < P' j b ↔ Q' j a < Q' j b,
+  have hQ'ab : ∀ j, P' j a < P' j b ↔ Q' j a < Q' j b,
   { refine (λ j, ⟨λ hP', _, λ hQ', _⟩); by_cases hj : j = i,
     { simp [Q'],
       rw if_pos hj,
@@ -397,11 +378,8 @@ begin
       exact bot_lt_of_makebetween a_neq_b hyp, },
     { simp [Q'],
       rw if_neg hj,
-      have not_bot : ¬ is_bot_of b (P j) X,
-      { by_contradiction h,
-        specialize h a a_in a_neq_b,
-        rw ← (i_piv.1 j hj a b a_in b_in).1 at hP',
-        linarith, },
+      have not_bot : ¬ is_bot_of b (P j) X :=
+        λ h, asymm ((i_piv.1 j hj a b a_in b_in).1.mpr hP') (h a a_in a_neq_b),
       rw if_neg not_bot,
       linarith [lt_of_maketop (Q j) a_neq_b X_ne a_in], },
     { convert i_piv.2.2.2.2.1 a a_in a_neq_b, },
@@ -414,16 +392,14 @@ begin
       rw ← (i_piv.1 j hj a b a_in b_in).1,
       have b_top : is_top_of b (P j) X := top_of_not_bot_of_extr (i_piv.2.1 j) not_bot,
       exact b_top a a_in a_neq_b, }, },
-  have hQQ' : ∀ i : ι, Q i a < Q i c ↔ Q' i a < Q' i c,
-  { intros i,
-    rw [Q'_eq i a a_neq_b, Q'_eq i c c_neq_b], },
+  have hQQ' : ∀ i, Q i a < Q i c ↔ Q' i a < Q' i c := λ i, by rw [Q'_eq, Q'_eq]; assumption,
   rw hind a c a_in c_in Q Q' hQQ', 
   have h₁ : f Q' a < f Q' b,
   { rw ← hind a b a_in b_in P' Q' hQ'ab,
-    exact i_piv.2.2.2.2.2.2 a a_in a_neq_b, },
+    exact i_piv.2.2.2.2.2.2 a a_in a_neq_b },
   have h₂ : f Q' b < f Q' c,
   { rw ← hind b c b_in c_in P Q' hQ'bc,
-    exact i_piv.2.2.2.2.2.1 c c_in c_neq_b, },
+    exact i_piv.2.2.2.2.2.1 c c_in c_neq_b },
   exact h₁.trans h₂,
 end
 
@@ -454,7 +430,7 @@ begin
     rw hij,
     split; refine j_dict _ _ _ _ (ne_comm.1 _) (ne_comm.1 _) Pᵢ; assumption, },
   refine ⟨i, λ x y x_in y_in Pᵢ hyp, _⟩,
-  rcases @eq_or_ne _ b x with (rfl | hx); rcases @eq_or_ne _ b y with (rfl | hy), -- @s will drop when we merge master
+  rcases @eq_or_ne _ b x with rfl | hx; rcases @eq_or_ne _ b y with rfl | hy, -- @s will drop when we merge master
   { exact ((irrefl _) hyp).rec _ },
   { exact (this y y_in hy.symm Pᵢ).2 hyp },
   { exact (this x x_in hx.symm Pᵢ).1 hyp },

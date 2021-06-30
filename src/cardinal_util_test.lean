@@ -3,8 +3,8 @@ import data.set.basic
 
 open finset
 
---we think of social states as type σ and inidividuals as type ι
-variables {σ ι : Type}
+-- We think of social states as type `σ` and inidividuals as type `ι`
+variables {σ ι : Type*}
 
 /-! 
 ## Notes
@@ -12,6 +12,7 @@ variables {σ ι : Type}
 * "All individuals rank" refers to the rankings of each and every individual. 
 * "Society ranks" refers to output of a social welfare function 
   (e.g. the final result of an election process).
+* <Andrew: Can you please write something describing what a social welfare function is? Thanks!>
 
 ## Important Definitions
 -/
@@ -22,10 +23,9 @@ variables {σ ι : Type}
 def weak_pareto (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (P : ι → σ → ℝ), (∀ i : ι, P i x < P i y) → (f P) x < (f P) y
 
-/-- Suppose every voter's ordering of X and Y remains unchanged between two 
-  rankings `P` and `P'`. We say that a social welfare function is 
-  Independent of Irrelevant Alternatives if the group's ordering of X and Y
-  remains unchanged too. -/
+/-- Suppose that every individual's ranking of `X` and `Y` remains unchanged between two rankings `P` 
+  and `P'`. We say that a social welfare function is *independent of irrelevant alternatives* if 
+  society's ranking of `X` and `Y` also remains unchanged between `P` and `P'`. -/
 def ind_of_irr_alts (f : (ι → σ → ℝ) → σ → ℝ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (P P' : ι → σ → ℝ), 
   (∀ i : ι, P i x < P i y ↔ P' i x < P' i y) → (f P x < f P y ↔ f P' x < f P' y)
@@ -59,7 +59,7 @@ def same_order (p p' : σ → ℝ) (x y x' y' : σ) : Prop :=
   there exist rankings `P` and `P'` such that: 
   ⋆ all individuals except for `i` rank all social states in the same order in both rankings
   ⋆ all individuals place `b` in an extremal position in both rankings
-  ⋆ `i` ranks `b` at the bottom of their rankings in `P`, but the top of their rankigns in `P'`
+  ⋆ `i` ranks `b` at the bottom of their rankings in `P`, but the top of their rankings in `P'`
   ⋆ society ranks `b` at the bottom of its rankings in `P`, but the top of its rankings in `P'` -/
 def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∃ (P P' : ι → σ → ℝ),
@@ -76,19 +76,19 @@ def is_dictator_except (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ
 open function
 
 /-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
-  `maketop b p X` updates `p` so that `b` now ranked at the top of `X`. -/
+  `maketop b p X` updates `p` so that `b` is now ranked at the top of `X`. -/
 noncomputable def maketop [decidable_eq σ] 
   (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty) : σ → ℝ :=
 update p b $ ((X.image p).max' (h.image p)) + 1
 
 /-- Given an arbitary ranking `p`, social state `b`, and finite set of social states `X`,
-  `makebot b p X` updates `p` so that `b` now ranked at the bottom of `X`. -/
+  `makebot b p X` updates `p` so that `b` is now ranked at the bottom of `X`. -/
 noncomputable def makebot [decidable_eq σ]
   (p : σ → ℝ) (b : σ) (X : finset σ) (h : X.nonempty) : σ → ℝ :=
 update p b $ ((X.image p).min' (h.image p)) - 1
 
 /-- Given an arbitary ranking `p` and social states `a`, `b`, and `c`, 
-  `makebetween p a b c` updates `p` so that `b` now ranked between `a` and `c`. -/
+  `makebetween p a b c` updates `p` so that `b` is now ranked between `a` and `c`. -/
 noncomputable def makebetween [decidable_eq σ] 
   (p : σ → ℝ) (a b c : σ) : σ → ℝ :=
 update p b $ (p a + p c) / 2
@@ -217,7 +217,7 @@ end
 -- ## The Proof
 
 lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card) (b_in : b ∈ X) (hyp : ∀ i : ι, is_extremal b (P i) X) :
+  (hX : 3 ≤ X.card) (b_in : b ∈ X) (hyp : ∀ i, is_extremal b (P i) X) :
   is_extremal b (f P) X := 
 begin
   by_contradiction hnot,
@@ -283,6 +283,8 @@ begin
   linarith,
 end    
 
+--let D : finset ι := {i ∈ univ | is_bot_of b (P i) X},
+--let P' := λ j, if j = i then maketop (P j) b X X_ne else P j,
 lemma second_step [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
@@ -291,10 +293,8 @@ begin
   classical,
   suffices : ∀ D : finset ι, ∀ P : ι → σ → ℝ, D = {i ∈ univ | is_bot_of b (P i) X} → 
     (∀ i, is_extremal b (P i) X) → is_bot_of b (f P) X → ∃ n', is_pivotal f X n' b,
-  { --let D : finset ι := {i ∈ univ | is_bot_of b (P i) X},
-    have h_bot : is_bot_of b (λ x, if x = b then 0 else 1) X := λ a _ hab, by simp [hab],
+  { have h_bot : is_bot_of b (λ x, ite (x = b) 0 1) X := λ a _ hab, by simp [hab],
     exact (this _ _ rfl) (λ i, extremal_of_bot_of h_bot) (social_bot_of_all_bot b_in hwp (λ i, h_bot)) },
-
   refine λ D, finset.induction_on D 
     (λ P h_null h_extr bf_bot, absurd 
       (social_top_of_all_top b_in hwp (λ j, top_of_not_bot_of_extr (h_extr j) _)) 
@@ -302,55 +302,37 @@ begin
     (λ i s i_not_in ih P h_insert h_extr bf_bot, _),
   { simpa using eq_empty_iff_forall_not_mem.mp h_null.symm j },
   { have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
-    let P' : ι → σ → ℝ := λ j, if j = i then maketop (P j) b X X_ne else P j,
-    have hP'_extr : ∀ i, is_extremal b (P' i) X,
+    have h_extr' : ∀ j, is_extremal b (ite (j = i) (maketop (P j) b X X_ne) (P j)) X,
     { intro j,
-      by_cases hj : j = i,
-      { refine or.inr (λ a a_in a_neq_b, _),
-        simp [P'],
-        rw if_pos hj,
-        exact lt_of_maketop (P j) a_neq_b X_ne a_in, },
-      { simp [P'],
-        rw if_neg hj,
-        exact h_extr j, }, },
-    by_cases hP' : is_top_of b (f P') X,
-    { refine ⟨i, P, P', λ j hj x y x_in y_in, _, h_extr, hP'_extr, _, _, bf_bot, hP'⟩,
-      { simp [P', same_order],
-        rw if_neg hj,
-        simp only [iff_self, and_self], },
+      by_cases hji : j = i,
+      { refine or.inr (λ a a_in hab, _),
+        simp only [if_pos hji, lt_of_maketop _ hab X_ne a_in] },
+      { simp only [if_neg hji, h_extr j] } },
+    by_cases hP' : is_top_of b (f (λ j, ite (j = i) (maketop (P j) b X X_ne) (P j))) X,
+    { refine ⟨i, P, _, λ j hj x y _ _, _, h_extr, h_extr', _, _, bf_bot, hP'⟩,
+      { simp [same_order, if_neg hj] },
       { have : i ∈ {j ∈ univ | is_bot_of b (P j) X}, { rw ← h_insert, exact mem_insert_self i s },
-        simpa only [true_and, sep_def, mem_filter, mem_univ] },
-      { simp only [P'], 
-        simp only [eq_self_iff_true, if_true],
-        exact top_of_maketop b (P i) X_ne, }, },
-    { have hsP' : s = {i ∈ univ | is_bot_of b (P' i) X},
-      { ext j, split,
-        { intro hs,
-          have hj : ¬ j = i := by by_contradiction hj; rw hj at hs;
-            exact i_not_in hs,
-          simp only [P', true_and, sep_def, mem_filter, mem_univ],
-          rw if_neg hj,
-          suffices hj_insert : j ∈ insert i s,
-          { rw h_insert at hj_insert,
-            simp only [P', true_and, sep_def, mem_filter, mem_univ] at hj_insert,
-            exact hj_insert },
-          exact mem_insert_of_mem hs, },
-        { intro hj,
-          simp only [P', true_and, sep_def, mem_filter, mem_univ] at hj,
-          have i_neq_j : ¬ j = i,
-          { by_contradiction,
-            
-            rw [if_pos h, h] at hj,
-            obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
-            linarith[(top_of_maketop b (P i) X_ne) a a_in a_neq_b, 
-            hj a a_in a_neq_b], },
-          rw [← erase_insert i_not_in, h_insert],
-          rw if_neg i_neq_j at hj,
-          simp only [true_and, sep_def, mem_filter, mem_univ, mem_erase, ne.def],
-          exact ⟨i_neq_j, hj⟩, }, },
-      specialize ih P' hsP' hP'_extr (bot_of_not_top_of_extr 
-        (first_step hwp hind hX b_in hP'_extr) hP'),
-      exact ih, }, }, 
+        simpa },
+      { simp [top_of_maketop, X_ne], }, },
+    { refine ih _ _ h_extr' (bot_of_not_top_of_extr (first_step hwp hind hX b_in h_extr') hP'),
+      ext j, 
+      simp only [true_and, sep_def, mem_filter, mem_univ],
+      split; intro hj,
+      { suffices : j ∈ insert i s, 
+        { have hji : j ≠ i, 
+          { by_contra hji,
+            rw not_not.mp hji at hj,
+            exact i_not_in hj },
+          rw h_insert at this, 
+          simpa [hji] },
+        exact mem_insert_of_mem hj },
+      { have hji : j ≠ i,
+        { by_contra hji,
+          obtain ⟨a, a_in, a_neq_b⟩ := second_distinct_mem hX b_in,
+          apply asymm (top_of_maketop b (P i) X_ne a a_in a_neq_b),
+          simpa [not_not.mp hji] using hj a a_in a_neq_b },
+        rw [← erase_insert i_not_in, h_insert],
+        simpa [hji] using hj } } }, 
 end
 
 lemma third_step (hind : ind_of_irr_alts f X) 
@@ -483,8 +465,3 @@ lemma arrows_theorem [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
   is_dictatorship f X := 
 fourth_step hind hX $ second_step hwp hind hX
-
-example (p q :Prop) (h1 : p) (h2 : ¬ p) : q := false.rec q (h2 h1)
-example (p q :Prop) (h : false) : q := by library_search
-#check asymm
-#check false.rec_on

@@ -4,9 +4,7 @@ import tactic
 open relation vector finset
 
 --we think of social states as type σ and inidividuals as type ι
-variables {σ ι : Type} [decidable_eq σ] [decidable_eq ι]
-
-variables {x y x' y' a b : σ} {R R' : σ → σ → Prop} 
+variables {σ ι : Type} {x y x' y' a b : σ} {R R' : σ → σ → Prop} 
 
 ----------------------------------------------
 --Some Basic Definitions and Lemmas
@@ -64,6 +62,7 @@ lemma cyclical_of_no_highest (R : σ → σ → Prop) {S : finset σ} (hS : S.no
   (hR : ∀ a ∈ S, ∃ b ∈ S, R b a) :
   ∃ c ∈ S, trans_gen R c c :=
 begin
+  classical,
   replace hR : ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a :=
     λ a ha, let ⟨b, hb, h⟩ := hR a ha in ⟨b, hb, trans_gen.single h⟩, -- maybe just make this the assumption istead of `hR`?
   refine finset.induction_on S (by rintro ⟨_, ⟨⟩⟩) _ hS hR,
@@ -86,13 +85,14 @@ If a relation is reflexive and total, then acyclicality is a necessary
 and sufficient condition for a choice function to be defined on every finset `X`. 
 -/
 theorem best_elem_iff_acyclical [fintype σ] 
-  (hrfl : reflexive R) (htot : total R) : 
+  (htot : total R) : 
   (∀ X : finset σ, X.nonempty → ∃ b ∈ X, is_best_element b X R) ↔ acyclical R := 
 begin
+  classical,
   refine ⟨λ h, _, λ h_acyc X X_ne, _⟩,
   { simp only [acyclical, not_exists], 
     intros x hx,
-    obtain ⟨b, b_in, hb⟩ := h {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a} ⟨x, by simpa⟩, -- can we maybe pull this sort of thing out into its own lemma?
+    obtain ⟨b, b_in, hb⟩ := h {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a} ⟨x, by simpa⟩, -- can we maybe pull this sort of thing out into its own general lemma?
     simp only [true_and, sep_def, mem_filter, mem_univ] at b_in,
     rcases trans_gen.tail'_iff.mp b_in.2 with ⟨c, hc₁, hc₂⟩,
     refine hc₂.2 (hb c _),

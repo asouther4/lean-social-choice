@@ -1,5 +1,4 @@
 import data.set.finite
-import data.set.basic 
 import tactic
 
 open relation vector finset
@@ -7,8 +6,7 @@ open relation vector finset
 --we think of social states as type σ and inidividuals as type ι
 variables {σ ι : Type} [decidable_eq σ] [decidable_eq ι]
 
-variables {x y x' y' a b : σ} 
-          {R R' : σ → σ → Prop} 
+variables {x y x' y' a b : σ} {R R' : σ → σ → Prop} 
 
 ----------------------------------------------
 --Some Basic Definitions and Lemmas
@@ -56,26 +54,29 @@ def is_best_element (x : σ) (S : finset σ) (R : σ → σ → Prop) : Prop :=
 ∀ y ∈ S, R x y
 
 noncomputable def maximal_set (S : finset σ) (R: σ → σ → Prop) : finset σ := 
-{ x ∈ S | is_maximal_element x S R }
+{x ∈ S | is_maximal_element x S R}
 
 noncomputable def choice_set (S : finset σ) (R: σ → σ → Prop) : finset σ := 
-{ x ∈ S | is_best_element x S R }
+{x ∈ S | is_best_element x S R}
 
 
-lemma cyclical_of_no_highest (R : σ → σ → Prop) (S : finset σ) (hS : S.nonempty) 
-  (hR : ∀a ∈ S, ∃b ∈ S, R b a) :
-∃ c ∈ S, trans_gen R c c :=
+lemma cyclical_of_no_highest (R : σ → σ → Prop) {S : finset σ} (hS : S.nonempty) 
+  (hR : ∀ a ∈ S, ∃ b ∈ S, R b a) :
+  ∃ c ∈ S, trans_gen R c c :=
 begin
-  replace hR : ∀a ∈ S, ∃b ∈ S, trans_gen R b a :=
-    λ a ha, let ⟨b, hb, h⟩ := hR a ha in ⟨b, hb, trans_gen.single h⟩,
-  classical, refine finset.induction_on S (by rintro ⟨_, ⟨⟩⟩) _ hS hR,
-  rintro a s - IH - hR,
-  obtain ⟨b, hb', ba⟩ := hR a (by simp),
-  obtain rfl | hb := finset.mem_insert.1 hb', {exact ⟨_, by simp, ba⟩},
-  obtain ⟨c, hc, h⟩ := IH ⟨_, hb⟩ (λ d hd, _), {exact ⟨c, by simp [hc], h⟩},
-  obtain ⟨e, he, ed⟩ := hR d (by simp [hd]),
-  obtain rfl | he := finset.mem_insert.1 he,
-  {exact ⟨_, hb, ba.trans ed⟩}, {exact ⟨_, he, ed⟩}
+  replace hR : ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a :=
+    λ a ha, let ⟨b, hb, h⟩ := hR a ha in ⟨b, hb, trans_gen.single h⟩, -- maybe just make this the assumption istead of `hR`?
+  refine finset.induction_on S (by rintro ⟨_, ⟨⟩⟩) _ hS hR,
+  rintro a s - IH - hR',
+  obtain ⟨b, hb', ba⟩ := hR' a (mem_insert_self a s),
+  obtain rfl | hb := mem_insert.1 hb', 
+  { exact ⟨_, mem_insert_self b s, ba⟩ },
+  { obtain ⟨c, hc, h⟩ := IH ⟨_, hb⟩ (λ d hd, _), 
+    { exact ⟨c, mem_insert_of_mem hc, h⟩ },
+    { obtain ⟨e, he, ed⟩ := hR' d (mem_insert_of_mem hd),
+      obtain rfl | he := mem_insert.1 he,
+      { exact ⟨_, hb, ba.trans ed⟩ }, 
+      { exact ⟨_, he, ed⟩ } } },
 end
 
 /- Sen's Theorem on the existence of a choice function, from 
@@ -85,40 +86,21 @@ If a relation is reflexive and total, then acyclicality is a necessary
 and sufficient condition for a choice function to be defined on every finset `X`. 
 -/
 theorem best_elem_iff_acyclical [fintype σ] 
-(hrfl : reflexive R) (htot : total R) : 
-(∀ X : finset σ, X.nonempty → ∃ b ∈ X, is_best_element b X R) ↔ (acyclical R) := 
+  (hrfl : reflexive R) (htot : total R) : 
+  (∀ X : finset σ, X.nonempty → ∃ b ∈ X, is_best_element b X R) ↔ acyclical R := 
 begin
-  split,
-  { intro h_best,
-    unfold acyclical, 
-    by_contradiction h,
-    rcases h with ⟨x, hx⟩,
-    let S : finset σ := {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a},
-    have S_ne : S.nonempty :=
-      ⟨x , by simpa only [S, true_and, sep_def, mem_filter, mem_univ, and_self]⟩,
-    specialize h_best S S_ne,
-    rcases h_best with ⟨b, b_in, hb⟩,
-    simp only [S, true_and, sep_def, mem_filter, mem_univ] at b_in,
-    cases b_in with hb₁ hb₂,
-    rw trans_gen.tail'_iff at hb₂,
-    rcases hb₂ with ⟨c, hc₁, hc₂⟩,
-    have c_in : c ∈ S,
-    { simp only [S, true_and, sep_def, mem_filter, mem_univ, and_self],
-      split, exact trans_gen.head hc₂ hb₁,
-      exact trans_gen.trans_left hx hc₁, },
-    specialize hb c c_in,
-    exact hc₂.2 hb, },
-  { intros h_acyc X X_ne,
-    by_contradiction h,
-    apply h_acyc,
-    suffices : ∃ c ∈ X, trans_gen (P R) c c,
-    { rcases this with ⟨c, c_in, hc⟩,
-      exact ⟨c, hc⟩, },
-    apply cyclical_of_no_highest (P R) X X_ne,
-    unfold is_best_element at h,
-    push_neg at h, 
-    intros a a_in,
-    specialize h a a_in,
-    rcases h with ⟨b, b_in, hb⟩,
-    exact ⟨b, b_in, ⟨(htot a b).resolve_left hb, hb⟩⟩, },
+  refine ⟨λ h, _, λ h_acyc X X_ne, _⟩,
+  { simp only [acyclical, not_exists], 
+    intros x hx,
+    obtain ⟨b, b_in, hb⟩ := h {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a} ⟨x, by simpa⟩, -- can we maybe pull this sort of thing out into its own lemma?
+    simp only [true_and, sep_def, mem_filter, mem_univ] at b_in,
+    rcases trans_gen.tail'_iff.mp b_in.2 with ⟨c, hc₁, hc₂⟩,
+    refine hc₂.2 (hb c _),
+    simp [b_in.1.head hc₂, hx.trans_left hc₁] },
+  { by_contra h,
+    suffices : ∃ c ∈ X, trans_gen (P R) c c, from let ⟨c, _, hc⟩ := this in h_acyc ⟨c, hc⟩,
+    refine cyclical_of_no_highest (P R) X_ne (λ a a_in, _),
+    simp only [is_best_element, not_exists, exists_prop, not_and, not_forall] at h,
+    obtain ⟨b, b_in, hb⟩ := h a a_in,
+    exact ⟨b, b_in, ⟨(htot a b).resolve_left hb, hb⟩⟩ },
 end

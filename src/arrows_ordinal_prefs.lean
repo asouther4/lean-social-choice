@@ -3,6 +3,9 @@ import tactic
 
 open relation vector finset
 
+/- # Andrew says: 
+IGNORE first_step and IGNORE the `unrestriced_domain` definition -/
+
 --we think of social states as type σ and inidividuals as type ι
 variables {σ ι : Type} [decidable_eq σ] [decidable_eq ι]
 
@@ -88,6 +91,22 @@ unrestricted_domain f ∧ weak_pareto f X N ∧ ind_of_irr_alts f X N ∧ ∀ (R
 
 def is_dictatorship (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (X : finset σ) (N : finset ι) : Prop :=
 ∃ i ∈ N, ∀ (x y ∈ X) (Rᵢ : ι → (σ → σ → Prop)), P (Rᵢ i) x y → P (f Rᵢ) x y
+
+
+
+noncomputable def maketop' [decidable_eq σ] 
+  (p : σ → σ → Prop) (b : σ) : σ → σ → Prop := λ x y,
+    if x = b then true else p x y
+
+
+example [decidable_eq σ] (p: σ → σ → Prop) (b : σ) : 
+  ∀ a,  (maketop' p b) b a :=
+begin
+  intro a,
+  simp only [maketop', true_or, eq_self_iff_true, if_true_left_eq_or]
+end
+
+
 
 
 

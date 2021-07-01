@@ -18,7 +18,7 @@ reflexive R ∧ total R ∧ transitive R
 def P (R : σ → σ → Prop) (x y : σ) : Prop := R x y ∧ ¬ R y x -- accepts a relation and two social states
 
 def acyclical (R : σ → σ → Prop) : Prop := 
-¬ ∃ x : σ, trans_gen (P R) x x
+∀ x : σ, ¬trans_gen (P R) x x
 
 lemma R_of_nP_total (hR: total R) (h : ¬ P R y x) : R x y :=
 begin
@@ -46,7 +46,7 @@ lemma same_order_of_reverseP_P' (hR : P R y x) (hR' : P R' y x) : same_order R R
 
 
 def is_maximal_element (x : σ) (S : finset σ) (R : σ → σ → Prop) : Prop :=
-¬ ∃ y ∈ S, P R y x
+∀ y ∈ S, ¬P R y x
 
 def is_best_element (x : σ) (S : finset σ) (R : σ → σ → Prop) : Prop :=
 ∀ y ∈ S, R x y
@@ -98,7 +98,7 @@ begin
     refine hc₂.2 (hb c _),
     simp [b_in.1.head hc₂, hx.trans_left hc₁] },
   { by_contra h,
-    suffices : ∃ c ∈ X, trans_gen (P R) c c, from let ⟨c, _, hc⟩ := this in h_acyc ⟨c, hc⟩,
+    suffices : ∃ c ∈ X, trans_gen (P R) c c, from let ⟨c, _, hc⟩ := this in h_acyc c hc,
     refine cyclical_of_no_highest (P R) X_ne (λ a a_in, _),
     simp only [is_best_element, not_exists, exists_prop, not_and, not_forall] at h,
     obtain ⟨b, b_in, hb⟩ := h a a_in,

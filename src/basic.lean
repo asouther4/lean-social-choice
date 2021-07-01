@@ -26,7 +26,7 @@ begin
   exacts [not_and_not_right.mp h hyp, or_iff_not_imp_right.mp (hR x y) hyp],
 end
 
-lemma nP_of_reverseP (h : P R x y) : ¬ P R y x :=
+lemma nP_of_reverseP (h : P R x y) : ¬P R y x :=
 not_and_not_right.mpr $ λ n, h.1
 
 lemma false_of_P_self (h : P R x x) : false := 
@@ -44,7 +44,6 @@ lemma same_order_of_reverseP_P' (hR : P R y x) (hR' : P R' y x) : same_order R R
 ⟨⟨⟨hR.2.elim, hR'.2.elim⟩, ⟨λ h, hR'.1, λ h, hR.1⟩⟩, 
   ⟨⟨(nP_of_reverseP hR).elim, (nP_of_reverseP hR').elim⟩, ⟨λ h, hR', λ h, hR⟩⟩⟩
 
-
 def is_maximal_element (x : σ) (S : finset σ) (R : σ → σ → Prop) : Prop :=
 ∀ y ∈ S, ¬P R y x
 
@@ -57,15 +56,12 @@ noncomputable def maximal_set (S : finset σ) (R: σ → σ → Prop) : finset �
 noncomputable def choice_set (S : finset σ) (R: σ → σ → Prop) : finset σ := 
 {x ∈ S | is_best_element x S R}
 
-
 lemma cyclical_of_no_highest (R : σ → σ → Prop) {S : finset σ} (hS : S.nonempty) 
-  (hR : ∀ a ∈ S, ∃ b ∈ S, R b a) :
+  (hR : ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a) :
   ∃ c ∈ S, trans_gen R c c :=
 begin
   classical,
-  replace hR : ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a :=
-    λ a ha, let ⟨b, hb, h⟩ := hR a ha in ⟨b, hb, trans_gen.single h⟩, -- maybe just make this the assumption istead of `hR`?
-  refine finset.induction_on S (by rintro ⟨_, ⟨⟩⟩) _ hS hR,
+  refine finset.induction_on S _ _ hS hR, { rintro ⟨_, ⟨⟩⟩ },
   rintro a s - IH - hR',
   obtain ⟨b, hb', ba⟩ := hR' a (mem_insert_self a s),
   obtain rfl | hb := mem_insert.1 hb', 
@@ -77,6 +73,10 @@ begin
       { exact ⟨_, hb, ba.trans ed⟩ }, 
       { exact ⟨_, he, ed⟩ } } },
 end
+
+lemma forall_exists_trans_gen (R : σ → σ → Prop) {S : finset σ} (hR : ∀ a ∈ S, ∃ b ∈ S, R b a) :
+  ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a :=
+λ a ha, let ⟨b, hb, h⟩ := hR a ha in ⟨b, hb, trans_gen.single h⟩
 
 /- Sen's Theorem on the existence of a choice function, from 
 *Social Choice and Collective Welfare* (1970). 
@@ -92,12 +92,12 @@ begin
   refine ⟨λ h x hx, _, λ h_acyc X X_ne, _⟩,
   { obtain ⟨b, b_in, hb⟩ := h {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a} ⟨x, by simpa⟩, -- can we maybe pull this sort of thing out into its own general lemma?
     simp only [true_and, sep_def, mem_filter, mem_univ] at b_in,
-    rcases trans_gen.tail'_iff.mp b_in.2 with ⟨c, hc₁, hc₂⟩,
+    obtain ⟨c, hc₁, hc₂⟩ := trans_gen.tail'_iff.mp b_in.2,
     refine hc₂.2 (hb c _),
     simp [b_in.1.head hc₂, hx.trans_left hc₁] },
   { by_contra h,
     suffices : ∃ c ∈ X, trans_gen (P R) c c, from let ⟨c, _, hc⟩ := this in h_acyc c hc,
-    refine cyclical_of_no_highest (P R) X_ne (λ a a_in, _),
+    refine cyclical_of_no_highest (P R) X_ne (forall_exists_trans_gen _ (λ a a_in, _)),
     simp only [is_best_element, not_exists, not_forall] at h,
     obtain ⟨b, b_in, hb⟩ := h a a_in,
     exact ⟨b, b_in, ⟨(htot a b).resolve_left hb, hb⟩⟩ },

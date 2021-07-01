@@ -89,10 +89,8 @@ theorem best_elem_iff_acyclical [fintype σ]
   (∀ X : finset σ, X.nonempty → ∃ b ∈ X, is_best_element b X R) ↔ acyclical R := 
 begin
   classical,
-  refine ⟨λ h, _, λ h_acyc X X_ne, _⟩,
-  { simp only [acyclical, not_exists], 
-    intros x hx,
-    obtain ⟨b, b_in, hb⟩ := h {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a} ⟨x, by simpa⟩, -- can we maybe pull this sort of thing out into its own general lemma?
+  refine ⟨λ h x hx, _, λ h_acyc X X_ne, _⟩,
+  { obtain ⟨b, b_in, hb⟩ := h {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a} ⟨x, by simpa⟩, -- can we maybe pull this sort of thing out into its own general lemma?
     simp only [true_and, sep_def, mem_filter, mem_univ] at b_in,
     rcases trans_gen.tail'_iff.mp b_in.2 with ⟨c, hc₁, hc₂⟩,
     refine hc₂.2 (hb c _),
@@ -100,7 +98,7 @@ begin
   { by_contra h,
     suffices : ∃ c ∈ X, trans_gen (P R) c c, from let ⟨c, _, hc⟩ := this in h_acyc c hc,
     refine cyclical_of_no_highest (P R) X_ne (λ a a_in, _),
-    simp only [is_best_element, not_exists, exists_prop, not_and, not_forall] at h,
+    simp only [is_best_element, not_exists, not_forall] at h,
     obtain ⟨b, b_in, hb⟩ := h a a_in,
     exact ⟨b, b_in, ⟨(htot a b).resolve_left hb, hb⟩⟩ },
 end

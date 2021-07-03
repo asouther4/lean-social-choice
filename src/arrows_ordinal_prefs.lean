@@ -99,6 +99,11 @@ def maketop [decidable_eq σ] (p : σ → σ → Prop) (b : σ) : σ → σ → 
 def makebot [decidable_eq σ] (p : σ → σ → Prop) (b : σ) : σ → σ → Prop := 
 λ x y, if y = b then true else p x y
 
+/-- NOTE: I think this only makes sense if `p a c` is true (`a` is ranked higher than `c` in `p`). -Ben -/
+def makebetween [decidable_eq σ] (p : σ → σ → Prop) (a b c : σ) : σ → σ → Prop := 
+λ x y, if x = a ∨ y = c then true else p x y
+
+
 /- Some tests/exercises: -/
 
 lemma test1 [decidable_eq σ] (p : σ → σ → Prop) (b a : σ) : 

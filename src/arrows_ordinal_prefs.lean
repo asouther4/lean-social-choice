@@ -80,10 +80,10 @@ def unrestricted_domain (f : (ι → σ → σ → Prop) → (σ → σ → Prop
     P (Rᵢ i) (nth (nth T j) k) (nth (nth T j) k'))
 
 def weak_pareto (f : (ι → σ → σ → Prop) → σ → σ → Prop) (X : finset σ) (N : finset ι) : Prop := 
-∀ (x y ∈ X) (Rᵢ : ι → (σ → σ → Prop)), (∀i ∈ N,  P (Rᵢ i) x y) → P (f Rᵢ) x y
+∀ (x y ∈ X) (Rᵢ : ι → (σ → σ → Prop)), (∀ i ∈ N, P (Rᵢ i) x y) → P (f Rᵢ) x y
 
 def ind_of_irr_alts (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (X : finset σ) (N : finset ι) : Prop :=
-∀ (Rᵢ Rᵢ' : ι → (σ → σ → Prop)) (x y ∈ X), (∀i ∈ N, same_order (Rᵢ i) (Rᵢ' i) x y x y) → 
+∀ (Rᵢ Rᵢ' : ι → (σ → σ → Prop)) (x y ∈ X), (∀ i ∈ N, same_order (Rᵢ i) (Rᵢ' i) x y x y) → 
   same_order (f Rᵢ) (f Rᵢ') x y x y
 
 def is_arrovian (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (X : finset σ) (N : finset ι) : Prop :=
@@ -93,20 +93,29 @@ def is_dictatorship (f : (ι → σ → σ → Prop) → (σ → σ → Prop)) (
 ∃ i ∈ N, ∀ (x y ∈ X) (Rᵢ : ι → (σ → σ → Prop)), P (Rᵢ i) x y → P (f Rᵢ) x y
 
 
+def maketop [decidable_eq σ] (p : σ → σ → Prop) (b : σ) : σ → σ → Prop := 
+λ x y, if x = b then true else p x y
 
-noncomputable def maketop' [decidable_eq σ] 
-  (p : σ → σ → Prop) (b : σ) : σ → σ → Prop := λ x y,
-    if x = b then true else p x y
+def makebot [decidable_eq σ] (p : σ → σ → Prop) (b : σ) : σ → σ → Prop := 
+λ x y, if y = b then true else p x y
 
+/- Some tests/exercises: -/
 
-example [decidable_eq σ] (p: σ → σ → Prop) (b : σ) : 
-  ∀ a,  (maketop' p b) b a :=
+lemma test1 [decidable_eq σ] (p : σ → σ → Prop) (b a : σ) : 
+  maketop p b b a :=
+by simp only [maketop, true_or, eq_self_iff_true, if_true_left_eq_or]
+
+-- I don't think we have enough infrastructure yet to show this one
+lemma test2 [decidable_eq σ] (p : σ → σ → Prop) (hp : is_pref_ordering p) (b a : σ) (hne : a ≠ b) : 
+  ¬ maketop p b a b :=
 begin
-  intro a,
-  simp only [maketop', true_or, eq_self_iff_true, if_true_left_eq_or]
+  -- have hmp : is_pref_ordering (maketop p b), sorry,
+  -- have := test1 p b a,
+  -- have := nP_of_reverseP _ hmp this,
+  -- intro h,
+  -- simp only [maketop, hne, false_or, eq_self_iff_true, if_true_left_eq_or] at this h,
+  sorry,
 end
-
-
 
 
 

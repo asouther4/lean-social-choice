@@ -356,11 +356,11 @@ end
   If an individual `i` is pivotal w.r.t. `f` and `b`, then `i` is a dictator over all social states
   except `b`. -/
 lemma third_step (hind : ind_of_irr_alts f X) 
-  (hX : 3 ≤ X.card) (b_in : b ∈ X) {i : ι} (i_piv : is_pivotal f X i b) :
+  (hX : 3 ≤ X.card) (b_in : b ∈ X) {i : ι} (hpiv : is_pivotal f X i b) :
   is_dictator_except f X i b :=
 begin
   intros a c a_in c_in hab hcb Q hyp,
-  obtain ⟨P, P', i_piv⟩ := i_piv,
+  obtain ⟨P, P', hpiv⟩ := hpiv,
   have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
   classical,
   let Q' := λ j, 
@@ -371,8 +371,8 @@ begin
         then makebot (Q j) b X X_ne
       else maketop (Q j) b X X_ne,
   refine (hind a c a_in c_in Q Q' (λ j, _)).mpr 
-    (((hind a b a_in b_in P' Q' (λ j, _)).mp (i_piv.2.2.2.2.2.2 a a_in hab)).trans 
-      ((hind b c b_in c_in P Q' (λ j, _)).mp (i_piv.2.2.2.2.2.1 c c_in hcb))),
+    (((hind a b a_in b_in P' Q' (λ j, _)).mp (hpiv.2.2.2.2.2.2 a a_in hab)).trans 
+      ((hind b c b_in c_in P Q' (λ j, _)).mp (hpiv.2.2.2.2.2.1 c c_in hcb))),
   { suffices : ∀ d ≠ b, Q j d = Q' j d, { rw [this, this]; assumption },
     intros d hdb,
     by_cases hj : j = i; simp only [Q', if_pos, hj, dite_eq_ite], 
@@ -382,28 +382,28 @@ begin
       { rw [← maketop_noteq (Q j) hdb X_ne, if_neg hbot] } } },
   { refine ⟨λ hP', _, λ hQ', _⟩; by_cases hj : j = i,
     { simpa [Q', if_pos, hj] using makebetween_lt_makebetween_bot hab hyp },
-    { have not_bot : ¬ is_bot b (P j) X :=
-        λ h, asymm ((i_piv.1 j hj a b a_in b_in).1.2 hP') (h a a_in hab),
-      simpa [Q', if_neg, hj, not_bot] using maketop_lt_maketop (Q j) hab X_ne a_in },
-    { convert i_piv.2.2.2.2.1 a a_in hab, },
-    { refine (i_piv.1 j hj a b a_in b_in).1.1 ((i_piv.2.1 j).is_top 
+    { have hbot : ¬ is_bot b (P j) X :=
+        λ h, asymm ((hpiv.1 j hj a b a_in b_in).1.2 hP') (h a a_in hab),
+      simpa [Q', if_neg, hj, hbot] using maketop_lt_maketop (Q j) hab X_ne a_in },
+    { convert hpiv.2.2.2.2.1 a a_in hab },
+    { refine (hpiv.1 j hj a b a_in b_in).1.1 ((hpiv.2.1 j).is_top 
         (λ hbot, asymm (makebot_lt_makebot (Q j) hab X_ne a_in) _) a a_in hab), 
       convert hQ'; simp [Q', if_neg hj, if_pos hbot] } },
   { refine ⟨λ hP, _, λ hQ', _⟩; by_cases hj : j = i,
     { simpa [Q', if_pos, hj] using makebetween_lt_makebetween_top hcb hyp },
-    { have b_bot : is_bot b (P j) X,
+    { have hbot : is_bot b (P j) X,
       { unfold is_bot,
-        by_contra b_bot, push_neg at b_bot,
-        rcases b_bot with ⟨d, d_in, hdb, hd⟩,
-        cases i_piv.2.1 j,
+        by_contra hbot, push_neg at hbot,
+        rcases hbot with ⟨d, d_in, hdb, hd⟩,
+        cases hpiv.2.1 j,
         { exact (h d d_in hdb).not_le hd },
         { exact (irrefl _) ((h c c_in hcb).trans hP) } },
-      simpa [Q', if_neg hj, if_pos b_bot] using makebot_lt_makebot (Q j) hcb X_ne c_in },
-    { convert i_piv.2.2.2.1 c c_in hcb },
+      simpa [Q', if_neg hj, if_pos hbot] using makebot_lt_makebot (Q j) hcb X_ne c_in },
+    { convert hpiv.2.2.2.1 c c_in hcb },
     { by_contra hP,
-      have not_bot : ¬ is_bot b (P j) X := λ h, hP (h c c_in hcb),
+      have hbot : ¬ is_bot b (P j) X := λ h, hP (h c c_in hcb),
       apply asymm (maketop_lt_maketop (Q j) hcb X_ne c_in),
-      convert hQ'; simp [Q', if_neg, not_bot, hj] } },
+      convert hQ'; simp [Q', if_neg, hbot, hj] } },
 end
 
 /-- Let `f` be a SWF satisfying IoIA, and `X` be a finite set containing at least 3 social states. 
@@ -412,32 +412,30 @@ lemma fourth_step (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (hpiv : ∀ b ∈ X, has_pivot f X b) : 
   is_dictatorship f X := 
 begin
-  obtain ⟨b, b_in⟩ := (card_pos.1 (zero_lt_two.trans hX)).bex,
-  obtain ⟨i, ipiv⟩ := hpiv b b_in,
+  obtain ⟨b, hb⟩ := (card_pos.1 (zero_lt_two.trans hX)).bex,
+  obtain ⟨i, ipiv⟩ := hpiv b hb,
   have h : ∀ a ∈ X, a ≠ b → ∀ Pᵢ : ι → σ → ℝ, 
-          (Pᵢ i a < Pᵢ i b → f Pᵢ a < f Pᵢ b) ∧ (Pᵢ i b < Pᵢ i a → f Pᵢ b < f Pᵢ a),
-  { intros a a_in hab Pᵢ,
-    obtain ⟨c, c_in, hca, hcb⟩ := exists_third_distinct_mem hX a_in b_in hab,
-    obtain ⟨j, jpiv⟩ := hpiv c c_in,
-    have hdict := third_step hind hX c_in jpiv,
-    have hij : i = j,
-    { by_contra hij,
-      rcases ipiv with ⟨R, R', hso, hextr, -, -, -, hbot, htop⟩,
-      refine asymm (htop a a_in hab) (hdict b a b_in a_in (ne_comm.1 hcb) (ne_comm.1 hca) R' 
-        ((hso j (ne_comm.1 hij) a b a_in b_in).2.1 _)),
+          (Pᵢ i a < Pᵢ i b → f Pᵢ a < f Pᵢ b) ∧ (Pᵢ i b < Pᵢ i a → f Pᵢ b < f Pᵢ a), -- we should have a better way of stating this that doesn't require the and (i.e. stated WLOG)
+  { intros a ha hab Pᵢ,
+    obtain ⟨c, hc, hca, hcb⟩ := exists_third_distinct_mem hX ha hb hab,
+    obtain ⟨hac, hbc⟩ := ⟨hca.symm, hcb.symm⟩,
+    obtain ⟨j, jpiv⟩ := hpiv c hc,
+    obtain hdict := third_step hind hX hc jpiv,
+    obtain rfl : j = i,
+    { by_contra hji,
+      obtain ⟨R, R', hso, hextr, -, -, -, hbot, htop⟩ := ipiv,
+      refine asymm (htop a ha hab) (hdict b a hb ha hbc hac R' ((hso j hji a b ha hb).2.1 _)),
       by_contra hnot,
       have h := (hextr j).resolve_left,
       simp only [is_top, is_bot, and_imp, exists_imp_distrib, not_forall] at h,
-      exact asymm (hbot a a_in hab) (hdict a b a_in b_in (ne_comm.1 hca) (ne_comm.1 hcb) R
-        (h a a_in hab hnot a a_in hab)) },
-    rw hij,
-    split; refine hdict _ _ _ _ (ne_comm.1 _) (ne_comm.1 _) Pᵢ; assumption },
-  refine ⟨i, λ x y x_in y_in Pᵢ hPᵢ, _⟩,
-  rcases @eq_or_ne _ b x with rfl | hx; rcases @eq_or_ne _ b y with rfl | hy, -- @s will drop when we merge master
+      exact asymm (hbot a ha hab) (hdict a b ha hb hac hbc R (h a ha hab hnot a ha hab)) },
+    split; apply hdict; assumption },
+  refine ⟨i, λ x y hx hy Pᵢ hPᵢ, _⟩,
+  rcases @eq_or_ne _ b x with rfl | hbx; rcases @eq_or_ne _ b y with rfl | hby, -- @s will drop when we merge master
   { exact ((irrefl _) hPᵢ).rec _ },
-  { exact (h y y_in hy.symm Pᵢ).2 hPᵢ },
-  { exact (h x x_in hx.symm Pᵢ).1 hPᵢ },
-  { exact third_step hind hX b_in ipiv x y x_in y_in hx.symm hy.symm Pᵢ hPᵢ },
+  { exact (h y hy hby.symm Pᵢ).2 hPᵢ },
+  { exact (h x hx hbx.symm Pᵢ).1 hPᵢ },
+  { exact third_step hind hX hb ipiv x y hx hy hbx.symm hby.symm Pᵢ hPᵢ },
 end
 
 /-- Arrow's Impossibility Theorem: Any social welfare function involving at least three social

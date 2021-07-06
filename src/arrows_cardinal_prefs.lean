@@ -194,9 +194,9 @@ begin
   obtain ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := h,
   obtain hac | rfl := @ne_or_eq _ a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hPa, hPc⟩ },
   obtain ⟨d, hd, hda, hdb⟩ := exists_third_distinct_mem hX ha hb hab,
-  by_cases h : f P b < f P d,
+  cases lt_or_le (f P b) (f P d),
   { exact ⟨d, a, hd, hc, hdb, hcb, hda, h.le, hPc⟩ },
-  { exact ⟨a, d, ha, hd, hab, hdb, hda.symm, hPa, not_lt.mp h⟩ },
+  { exact ⟨a, d, ha, hd, hab, hdb, hda.symm, hPa, h⟩ },
 end
 
 section make
@@ -265,7 +265,7 @@ begin
     hPc.not_lt)).trans (not_lt.mp ((not_congr (hind a b ha hb P _ (λ i, ⟨λ hP, _, λ hP', _⟩))).mp 
       hPa.not_lt))).not_lt (hwp a c ha hc _ (λ i, _)),
   { exact λ j, if is_top b (P j) X then makebetween (P j) a c b else update (P j) c (P j a + 1) },
-  { have h : ¬ is_top b (P i) X := λ b_top, asymm hP (b_top c hc hcb),
+  { have h : ¬ is_top b (P i) X := λ h, asymm hP (h c hc hcb),
     convert lt_add_of_lt_of_pos ((hextr i).is_bot h a ha hab) _; simp [h, hcb.symm] },
   { by_contra hP,
     have h : is_top b (P i) X := (hextr i).is_top (λ h, hP (h c hc hcb)),
@@ -273,7 +273,7 @@ begin
     linarith [h a ha hab] },
   { by_cases h : is_top b (P i) X; simpa [h, makebetween_noteq, hac, hcb.symm] },
   { by_contra hP,
-    have h : ¬ is_top b (P i) X := λ b_top, hP (b_top a ha hab),
+    have h : ¬ is_top b (P i) X := λ h, hP (h a ha hab),
     simp only at hP', simp [if_neg h, hac, hcb.symm] at hP',
     exact hP hP' },
   { by_cases h : is_top b (P i) X,
@@ -345,58 +345,57 @@ begin
     (is_bot_of_forall_is_bot b_in hwp (λ i, hbot)),
 end
 
-/-- Let `f` be a SWF satisfying IoIA, `X` be a finite set containing at least 3 social states, and 
-  `b` be one of those social states.
+/-- Let `f` be a SWF satisfying IoIA, `X` be a finite set of social states, and `b` be one of those 
+  social states.
   If an individual `i` is pivotal w.r.t. `f` and `b`, then `i` is a dictator over all social states
-  except `b`. -/
+  in `X` except `b`. -/
 lemma third_step (hind : ind_of_irr_alts f X) 
-  (hX : 3 ≤ X.card) (b_in : b ∈ X) {i : ι} (hpiv : is_pivotal f X i b) :
+  (hb : b ∈ X) {i : ι} (hpiv : is_pivotal f X i b) :
   is_dictator_except f X i b :=
 begin
-  intros a c a_in c_in hab hcb Q hyp,
+  intros a c ha hc hab hcb Q hyp,
   obtain ⟨P, P', hpiv⟩ := hpiv,
-  have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
+  have hX := nonempty_of_ne_empty (ne_empty_of_mem hb),
   classical,
   let Q' := λ j, 
     if j = i 
       then makebetween (Q j) a b c
     else 
       if is_bot b (P j) X 
-        then makebot (Q j) b X X_ne
-      else maketop (Q j) b X X_ne,
-  refine (hind a c a_in c_in Q Q' (λ j, _)).mpr 
-    (((hind a b a_in b_in P' Q' (λ j, _)).mp (hpiv.2.2.2.2.2.2 a a_in hab)).trans 
-      ((hind b c b_in c_in P Q' (λ j, _)).mp (hpiv.2.2.2.2.2.1 c c_in hcb))),
+        then makebot (Q j) b X hX
+      else maketop (Q j) b X hX,
+  refine (hind a c ha hc Q Q' (λ j, _)).mpr 
+    (((hind a b ha hb P' Q' (λ j, _)).mp (hpiv.2.2.2.2.2.2 a ha hab)).trans 
+      ((hind b c hb hc P Q' (λ j, _)).mp (hpiv.2.2.2.2.2.1 c hc hcb))),
   { suffices : ∀ d ≠ b, Q j d = Q' j d, { rw [this, this]; assumption },
     intros d hdb,
     by_cases hj : j = i; simp only [Q', if_pos, hj, dite_eq_ite], 
     { exact (makebetween_noteq (Q i) hdb).symm },
     { by_cases hbot : is_bot b (P j) X; simp only [if_neg hj],
-      { rw [← makebot_noteq (Q j) hdb X_ne, if_pos hbot] },
-      { rw [← maketop_noteq (Q j) hdb X_ne, if_neg hbot] } } },
+      { rw [← makebot_noteq (Q j) hdb hX, if_pos hbot] },
+      { rw [← maketop_noteq (Q j) hdb hX, if_neg hbot] } } },
   { refine ⟨λ hP', _, λ hQ', _⟩; by_cases hj : j = i,
     { simpa [Q', if_pos, hj] using makebetween_lt_makebetween_bot hab hyp },
-    { have hbot : ¬ is_bot b (P j) X :=
-        λ h, asymm ((hpiv.1 j hj a b a_in b_in).1.2 hP') (h a a_in hab),
-      simpa [Q', if_neg, hj, hbot] using maketop_lt_maketop (Q j) hab X_ne a_in },
-    { convert hpiv.2.2.2.2.1 a a_in hab },
-    { refine (hpiv.1 j hj a b a_in b_in).1.1 ((hpiv.2.1 j).is_top 
-        (λ hbot, asymm (makebot_lt_makebot (Q j) hab X_ne a_in) _) a a_in hab), 
+    { have hbot : ¬ is_bot b (P j) X := λ h, asymm ((hpiv.1 j hj a b ha hb).1.2 hP') (h a ha hab),
+      simpa [Q', if_neg, hj, hbot] using maketop_lt_maketop (Q j) hab hX ha },
+    { convert hpiv.2.2.2.2.1 a ha hab },
+    { refine (hpiv.1 j hj a b ha hb).1.1 ((hpiv.2.1 j).is_top 
+        (λ hbot, asymm (makebot_lt_makebot (Q j) hab hX ha) _) a ha hab), 
       convert hQ'; simp [Q', if_neg hj, if_pos hbot] } },
   { refine ⟨λ hP, _, λ hQ', _⟩; by_cases hj : j = i,
     { simpa [Q', if_pos, hj] using makebetween_lt_makebetween_top hcb hyp },
     { have hbot : is_bot b (P j) X,
       { unfold is_bot,
         by_contra hbot, push_neg at hbot,
-        obtain ⟨d, d_in, hdb, hd⟩ := hbot,
-        cases hpiv.2.1 j,
-        { exact (h d d_in hdb).not_le hd },
-        { exact (irrefl _) ((h c c_in hcb).trans hP) } },
-      simpa [Q', if_neg hj, if_pos hbot] using makebot_lt_makebot (Q j) hcb X_ne c_in },
-    { convert hpiv.2.2.2.1 c c_in hcb },
+        obtain ⟨d, hd, hdb, h⟩ := hbot,
+        cases hpiv.2.1 j with hbot htop,
+        { exact (hbot d hd hdb).not_le h },
+        { exact (irrefl _) ((htop c hc hcb).trans hP) } },
+      simpa [Q', if_neg hj, if_pos hbot] using makebot_lt_makebot (Q j) hcb hX hc },
+    { convert hpiv.2.2.2.1 c hc hcb },
     { by_contra hP,
-      have hbot : ¬ is_bot b (P j) X := λ h, hP (h c c_in hcb),
-      apply asymm (maketop_lt_maketop (Q j) hcb X_ne c_in),
+      have hbot : ¬ is_bot b (P j) X := λ h, hP (h c hc hcb),
+      apply asymm (maketop_lt_maketop (Q j) hcb hX hc),
       convert hQ'; simp [Q', if_neg, hbot, hj] } },
 end
 
@@ -414,7 +413,7 @@ begin
     obtain ⟨c, hc, hca, hcb⟩ := exists_third_distinct_mem hX ha hb hab,
     obtain ⟨hac, hbc⟩ := ⟨hca.symm, hcb.symm⟩,
     obtain ⟨j, jpiv⟩ := hpiv c hc,
-    obtain hdict := third_step hind hX hc jpiv,
+    obtain hdict := third_step hind hc jpiv,
     obtain rfl : j = i,
     { by_contra hji,
       obtain ⟨R, R', hso, hextr, -, -, -, hbot, htop⟩ := ipiv,
@@ -429,7 +428,7 @@ begin
   { exact ((irrefl _) hPᵢ).rec _ },
   { exact (h y hy hby.symm Pᵢ).2 hPᵢ },
   { exact (h x hx hbx.symm Pᵢ).1 hPᵢ },
-  { exact third_step hind hX hb ipiv x y hx hy hbx.symm hby.symm Pᵢ hPᵢ },
+  { exact third_step hind hb ipiv x y hx hy hbx.symm hby.symm Pᵢ hPᵢ },
 end
 
 /-- Arrow's Impossibility Theorem: Any social welfare function involving at least three social

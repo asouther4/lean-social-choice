@@ -187,6 +187,18 @@ theorem is_bot_of_forall_is_bot (b_in : b ∈ X) (hwp : weak_pareto f X)
   is_bot b (f P) X := 
 λ a a_in hab, hwp b a b_in a_in P $ λ i, hbot i a a_in hab
 
+lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extremal b (f P) X):
+  ∃ a c ∈ X, a ≠ b ∧ c ≠ b ∧ a ≠ c ∧ f P b ≤ f P a ∧ f P c ≤ f P b := 
+begin
+  unfold is_extremal is_bot is_top at h, push_neg at h,
+  obtain ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := h,
+  obtain hac | rfl := @ne_or_eq _ a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hPa, hPc⟩ },
+  obtain ⟨d, hd, hda, hdb⟩ := exists_third_distinct_mem hX ha hb hab,
+  by_cases h : f P b < f P d,
+  { exact ⟨d, a, hd, hc, hdb, hcb, hda, h.le, hPc⟩ },
+  { exact ⟨a, d, ha, hd, hab, hdb, hda.symm, hPa, not_lt.mp h⟩ },
+end
+
 section make
 
 variable [decidable_eq σ]
@@ -243,49 +255,33 @@ end make
   containing at least 3 social states, and `b` be one of those social states.
   If every individial ranks `b` extremally, then society also ranks `b` extremally w.r.t. `f`. -/
 lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card) (b_in : b ∈ X) (hextr : ∀ i, is_extremal b (P i) X) :
+  (hX : 3 ≤ X.card) (hb : b ∈ X) (hextr : ∀ i, is_extremal b (P i) X) :
   is_extremal b (f P) X := 
 begin
   classical,
-  by_contra hnot, dsimp only [is_extremal, is_bot, is_top] at hnot, push_neg at hnot,
-  obtain ⟨a, c, a_in, c_in, hab, hcb, hac, ha, hc⟩ : 
-    ∃ (t u ∈ X), t ≠ b ∧ u ≠ b ∧ t ≠ u ∧ f P b ≤ f P t ∧ f P u ≤ f P b,
-  { obtain ⟨⟨c, c_in, hcb, hc⟩, ⟨a, a_in, hab, ha⟩⟩ := hnot,
-    by_cases hac : a = c,
-    { obtain ⟨d, d_in, hda, hdb⟩ := exists_third_distinct_mem hX a_in b_in hab,
-      by_cases hd : f P b < f P d,
-      { exact ⟨d, c, d_in, c_in, hdb, hcb, ne_of_ne_of_eq hda hac, hd.le, hc⟩ },
-      { exact ⟨a, d, a_in, d_in, hab, hdb, hda.symm, ha, not_lt.mp hd⟩ } },
-    { exact ⟨a, c, a_in, c_in, hab, hcb, hac, ha, hc⟩ } },
-  let P₂ := λ j, if is_top b (P j) X then makebetween (P j) a c b else update (P j) c (P j a + 1),
-  have hP₂ac : ∀ i, P₂ i a < P₂ i c,
-  { intros i,
-    by_cases h : is_top b (P i) X,
-    { simp [P₂, if_pos h, makebetween_lt_makebetween_bot hac (h a a_in hab)] },
-    { simp [P₂, if_neg h, hac] } },
-  have hPab : ∀ i, P i a < P i b ↔ P₂ i a < P₂ i b,
-  { simp only [P₂],
-    refine λ i, ⟨λ hP, _, λ hP₂, _⟩, 
-    { by_cases h : is_top b (P i) X; simpa [h, makebetween_noteq, hac, hcb.symm] },
-    { by_contra hP,
-      have h : ¬ is_top b (P i) X := λ b_top, hP (b_top a a_in hab),
-      simp only at hP₂, simp [if_neg h, hac, hcb.symm] at hP₂,
-      exact hP hP₂ } },
-  have hPbc : ∀ i, P i b < P i c ↔ P₂ i b < P₂ i c, 
-  { simp only [P₂],
-    refine λ i, ⟨λ hP, _, λ hP₂, _⟩,
-    { have h : ¬ is_top b (P i) X := λ b_top, asymm hP (b_top c c_in hcb),
-      convert lt_add_of_lt_of_pos ((hextr i).is_bot h a a_in hab) _; simp [h, hcb.symm] },
-    { by_contradiction hP,
-      have h : is_top b (P i) X := (hextr i).is_top (λ h, hP (h c c_in hcb)),
-      simp only at hP₂, simp only [if_pos h, makebetween_noteq _ hcb.symm, makebetween_eq] at hP₂,
-      linarith [h a a_in hab] } },
-  have h_iir₁ := not_lt.mp ((not_congr (hind a b a_in b_in P P₂ hPab)).mp ha.not_lt),
-  have h_iir₂ := not_lt.mp ((not_congr (hind b c b_in c_in P P₂ hPbc)).mp hc.not_lt),
-  exact (h_iir₂.trans h_iir₁).not_lt (hwp a c a_in c_in P₂ hP₂ac),
-end    
+  by_contra hnot,
+  obtain ⟨a, c, ha, hc, hab, hcb, hac, hPa, hPc⟩ := exists_of_not_extremal hX hb hnot,
+  refine ((not_lt.mp ((not_congr (hind b c hb hc P _ (λ i, ⟨λ hP, _, λ hP', _⟩))).mp 
+    hPc.not_lt)).trans (not_lt.mp ((not_congr (hind a b ha hb P _ (λ i, ⟨λ hP, _, λ hP', _⟩))).mp 
+      hPa.not_lt))).not_lt (hwp a c ha hc _ (λ i, _)),
+  { exact λ j, if is_top b (P j) X then makebetween (P j) a c b else update (P j) c (P j a + 1) },
+  { have h : ¬ is_top b (P i) X := λ b_top, asymm hP (b_top c hc hcb),
+    convert lt_add_of_lt_of_pos ((hextr i).is_bot h a ha hab) _; simp [h, hcb.symm] },
+  { by_contra hP,
+    have h : is_top b (P i) X := (hextr i).is_top (λ h, hP (h c hc hcb)),
+    simp only at hP', simp only [if_pos h, makebetween_noteq _ hcb.symm, makebetween_eq] at hP',
+    linarith [h a ha hab] },
+  { by_cases h : is_top b (P i) X; simpa [h, makebetween_noteq, hac, hcb.symm] },
+  { by_contra hP,
+    have h : ¬ is_top b (P i) X := λ b_top, hP (b_top a ha hab),
+    simp only at hP', simp [if_neg h, hac, hcb.symm] at hP',
+    exact hP hP' },
+  { by_cases h : is_top b (P i) X,
+    { simp [if_pos h, makebetween_lt_makebetween_bot hac (h a ha hab)] },
+    { simp [if_neg h, hac] } },
+end  
 
---example (a b :ℝ) (h1 : a < b) (h2 : b ≤ a) : false := by library_search
+
 /-- An auxiliary lemma for the second step, in which we perform induction on the finite set
   `D' := {i ∈ univ | is_bot b (P i) X}`. Its statement is formulated so strangely (involving `D'` 
   and `P`) to allow for this induction. 
@@ -300,32 +296,30 @@ lemma second_step_aux [fintype ι]
 begin
   classical,
   refine finset.induction_on D'
-    (λ P h_null h_extr bf_bot, absurd 
-      (is_top_of_forall_is_top b_in hwp (λ j, (h_extr j).is_top _)) 
-      (bf_bot.not_top (exists_second_distinct_mem hX.le b_in))) 
-    (λ i D i_not_in ih P h_insert h_extr bf_bot, _),
-  { simpa using eq_empty_iff_forall_not_mem.mp h_null.symm j },
+    (λ P hempt hextr hbot, absurd 
+      (is_top_of_forall_is_top b_in hwp (λ j, (hextr j).is_top _)) 
+      (hbot.not_top (exists_second_distinct_mem hX.le b_in))) 
+    (λ i D hi IH P h_insert hextr hbot, _),
+  { simpa using eq_empty_iff_forall_not_mem.mp hempt.symm j },
   { have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
-    have h_extr' : ∀ j, is_extremal b (ite (j = i) (maketop (P j) b X X_ne) (P j)) X,
+    have hextr' : ∀ j, is_extremal b (ite (j = i) (maketop (P j) b X X_ne) (P j)) X,
     { intro j,
       by_cases hji : j = i,
       { refine or.inr (λ a a_in hab, _),
         simp only [if_pos hji, maketop_lt_maketop _ hab X_ne a_in] },
-      { simp only [if_neg hji, h_extr j] } },
+      { simp only [if_neg hji, hextr j] } },
     by_cases hP' : is_top b (f (λ j, ite (j = i) (maketop (P j) b X X_ne) (P j))) X,
-    { refine ⟨i, P, _, λ j hj x y _ _, _, h_extr, h_extr', _, _, bf_bot, hP'⟩,
+    { refine ⟨i, P, _, λ j hj x y _ _, _, hextr, hextr', _, _, hbot, hP'⟩,
       { simp [same_order, if_neg hj] },
       { have : i ∈ {j ∈ univ | is_bot b (P j) X}, { rw ← h_insert, exact mem_insert_self i D },
         simpa },
       { simp [top_of_maketop, X_ne] } },
-    { refine ih _ h_extr' ((first_step hwp hind hX b_in h_extr').is_bot hP'),
-      ext j, 
+    { refine IH _ hextr' ((first_step hwp hind hX b_in hextr').is_bot hP'),
+      ext j,
       simp only [true_and, sep_def, mem_filter, mem_univ],
       split; intro hj,
-      { suffices : j ∈ insert i D, 
-        { have hji : j ≠ i, 
-          { rintro rfl, 
-            exact i_not_in hj },
+      { suffices : j ∈ insert i D,
+        { have hji : j ≠ i, { rintro rfl, exact hi hj },
           rw h_insert at this,
           simpa [hji] },
         exact mem_insert_of_mem hj },
@@ -334,7 +328,7 @@ begin
           obtain ⟨a, a_in, hab⟩ := exists_second_distinct_mem hX.le b_in,
           apply asymm (top_of_maketop b (P j) X_ne a a_in hab),
           simpa using hj a a_in hab },
-        rw [← erase_insert i_not_in, h_insert],
+        rw [← erase_insert hi, h_insert],
         simpa [hji] using hj } } }, 
 end 
 
@@ -346,9 +340,9 @@ lemma second_step [fintype ι]
   has_pivot f X b := 
 begin
   classical,
-  have h_bot : is_bot b (λ x, ite (x = b) 0 1) X := λ _ _ h, by simp [h],
-  exact second_step_aux hwp hind hX b_in rfl (λ i, h_bot.is_extremal) 
-    (is_bot_of_forall_is_bot b_in hwp (λ i, h_bot)),
+  have hbot : is_bot b (λ x, ite (x = b) 0 1) X := λ _ _ h, by simp [h],
+  exact second_step_aux hwp hind hX b_in rfl (λ i, hbot.is_extremal) 
+    (is_bot_of_forall_is_bot b_in hwp (λ i, hbot)),
 end
 
 /-- Let `f` be a SWF satisfying IoIA, `X` be a finite set containing at least 3 social states, and 
@@ -394,7 +388,7 @@ begin
     { have hbot : is_bot b (P j) X,
       { unfold is_bot,
         by_contra hbot, push_neg at hbot,
-        rcases hbot with ⟨d, d_in, hdb, hd⟩,
+        obtain ⟨d, d_in, hdb, hd⟩ := hbot,
         cases hpiv.2.1 j,
         { exact (h d d_in hdb).not_le hd },
         { exact (irrefl _) ((h c c_in hcb).trans hP) } },

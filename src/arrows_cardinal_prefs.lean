@@ -175,16 +175,16 @@ or.inr hbot
 
 /-- If every individual ranks a social state `b` at the top of its rankings, then society must also
   rank `b` at the top of its rankings. -/
-theorem is_top_of_forall_is_top (b_in : b ∈ X) (hwp : weak_pareto f X) 
-  (htop : ∀ i, is_top b (P i) X) : 
-  is_top b (f P) X := 
+theorem is_top_of_forall_is_top (b_in : b ∈ X) (hwp : weak_pareto f X)
+  (htop : ∀ i, is_top b (P i) X) :
+  is_top b (f P) X :=
 λ a a_in hab, hwp a b a_in b_in P $ λ i, htop i a a_in hab
 
 /-- If every individual ranks a social state `b` at the bottom of its rankings, then society must 
   also rank `b` at the bottom of its rankings. -/
 theorem is_bot_of_forall_is_bot (b_in : b ∈ X) (hwp : weak_pareto f X) 
-  (hbot : ∀ i, is_bot b (P i) X) : 
-  is_bot b (f P) X := 
+  (hbot : ∀ i, is_bot b (P i) X) :
+  is_bot b (f P) X :=
 λ a a_in hab, hwp b a b_in a_in P $ λ i, hbot i a a_in hab
 
 lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extremal b (f P) X):
@@ -198,6 +198,9 @@ begin
   { exact ⟨d, a, hd, hc, hdb, hcb, hda, h.le, hPc⟩ },
   { exact ⟨a, d, ha, hd, hab, hdb, hda.symm, hPa, h⟩ },
 end
+
+lemma nonempty_of_mem {s : finset σ} {a : σ} (ha : a ∈ s) : s.nonempty := 
+nonempty_of_ne_empty $ ne_empty_of_mem ha
 
 section make
 
@@ -219,15 +222,15 @@ lemma makebetween_eq (a b c : σ) (p) :
   makebetween p a b c b = (p a + p c) / 2 :=
 update_same _ _ _
 
-lemma maketop_lt_maketop (p) (hab : a ≠ b) (hX : X.nonempty) (a_in : a ∈ X) : 
-  maketop p b X hX a < maketop p b X hX b :=
+lemma maketop_lt_maketop (p) (hab : a ≠ b) (ha : a ∈ X) : 
+  maketop p b X (nonempty_of_mem ha) a < maketop p b X (nonempty_of_mem ha) b :=
 by simpa [maketop, hab] using 
-  ((X.image p).le_max' _ (mem_image_of_mem p a_in)).trans_lt (lt_add_one _)
+  ((X.image p).le_max' _ (mem_image_of_mem p ha)).trans_lt (lt_add_one _)
 
-lemma makebot_lt_makebot (p) (hcb : c ≠ b) (hX : X.nonempty) (c_in : c ∈ X) : 
-  makebot p b X hX b < makebot p b X hX c :=
-by simpa [makebot, hcb] using sub_lt_iff_lt_add'.mpr 
-  (((X.image p).min'_le (p c) (mem_image_of_mem p c_in)).trans_lt (lt_one_add _))
+lemma makebot_lt_makebot (p) (hcb : c ≠ b) (hc : c ∈ X) : 
+  makebot p b X (nonempty_of_mem hc) b < makebot p b X (nonempty_of_mem hc) c :=
+by simpa [makebot, hcb] using sub_lt_iff_lt_add'.mpr
+  (((X.image p).min'_le (p c) (mem_image_of_mem p hc)).trans_lt (lt_one_add _))
 
 lemma makebetween_lt_makebetween_top (hcb : c ≠ b) (hp : p a < p c) : 
   makebetween p a b c b < makebetween p a b c c :=
@@ -245,7 +248,7 @@ end
 
 lemma top_of_maketop (b p) (hX : X.nonempty) :
   is_top b (maketop p b X hX) X := 
-λ a a_in hab, maketop_lt_maketop p hab hX a_in
+λ a ha hab, maketop_lt_maketop p hab ha
 
 end make
 
@@ -281,7 +284,6 @@ begin
     { simp [if_neg h, hac] } },
 end  
 
-
 /-- An auxiliary lemma for the second step, in which we perform induction on the finite set
   `D' := {i ∈ univ | is_bot b (P i) X}`. Its statement is formulated so strangely (involving `D'` 
   and `P`) to allow for this induction. 
@@ -296,24 +298,23 @@ lemma second_step_aux [fintype ι]
 begin
   classical,
   refine finset.induction_on D'
-    (λ P hempt hextr hbot, absurd 
-      (is_top_of_forall_is_top b_in hwp (λ j, (hextr j).is_top _)) 
-      (hbot.not_top (exists_second_distinct_mem hX.le b_in))) 
+    (λ P h hextr hbot, absurd (is_top_of_forall_is_top b_in hwp (λ j, (hextr j).is_top _))
+                              (hbot.not_top (exists_second_distinct_mem hX.le b_in))) 
     (λ i D hi IH P h_insert hextr hbot, _),
-  { simpa using eq_empty_iff_forall_not_mem.mp hempt.symm j },
-  { have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
-    have hextr' : ∀ j, is_extremal b (ite (j = i) (maketop (P j) b X X_ne) (P j)) X,
+  { simpa using eq_empty_iff_forall_not_mem.mp h.symm j },
+  { have hX' := nonempty_of_mem b_in,
+    have hextr' : ∀ j, is_extremal b (ite (j = i) (maketop (P j) b X hX') (P j)) X,
     { intro j,
       by_cases hji : j = i,
       { refine or.inr (λ a a_in hab, _),
-        simp only [if_pos hji, maketop_lt_maketop _ hab X_ne a_in] },
+        simp only [if_pos hji, maketop_lt_maketop _ hab a_in] },
       { simp only [if_neg hji, hextr j] } },
-    by_cases hP' : is_top b (f (λ j, ite (j = i) (maketop (P j) b X X_ne) (P j))) X,
+    by_cases hP' : is_top b (f (λ j, ite (j = i) (maketop (P j) b X hX') (P j))) X,
     { refine ⟨i, P, _, λ j hj x y _ _, _, hextr, hextr', _, _, hbot, hP'⟩,
       { simp [same_order, if_neg hj] },
       { have : i ∈ {j ∈ univ | is_bot b (P j) X}, { rw ← h_insert, exact mem_insert_self i D },
         simpa },
-      { simp [top_of_maketop, X_ne] } },
+      { simp [top_of_maketop, hX'] } },
     { refine IH _ hextr' ((first_step hwp hind hX b_in hextr').is_bot hP'),
       ext j,
       simp only [true_and, sep_def, mem_filter, mem_univ],
@@ -326,7 +327,7 @@ begin
       { have hji : j ≠ i,
         { rintro rfl,
           obtain ⟨a, a_in, hab⟩ := exists_second_distinct_mem hX.le b_in,
-          apply asymm (top_of_maketop b (P j) X_ne a a_in hab),
+          apply asymm (top_of_maketop b (P j) hX' a a_in hab),
           simpa using hj a a_in hab },
         rw [← erase_insert hi, h_insert],
         simpa [hji] using hj } } }, 
@@ -364,8 +365,8 @@ begin
       if is_bot b (P j) X 
         then makebot (Q j) b X hX
       else maketop (Q j) b X hX,
-  refine (hind a c ha hc Q Q' (λ j, _)).mpr 
-    (((hind a b ha hb P' Q' (λ j, _)).mp (hpiv.2.2.2.2.2.2 a ha hab)).trans 
+  refine (hind a c ha hc Q Q' (λ j, _)).mpr
+    (((hind a b ha hb P' Q' (λ j, _)).mp (hpiv.2.2.2.2.2.2 a ha hab)).trans
       ((hind b c hb hc P Q' (λ j, _)).mp (hpiv.2.2.2.2.2.1 c hc hcb))),
   { suffices : ∀ d ≠ b, Q j d = Q' j d, { rw [this, this]; assumption },
     intros d hdb,
@@ -377,10 +378,10 @@ begin
   { refine ⟨λ hP', _, λ hQ', _⟩; by_cases hj : j = i,
     { simpa [Q', if_pos, hj] using makebetween_lt_makebetween_bot hab hyp },
     { have hbot : ¬ is_bot b (P j) X := λ h, asymm ((hpiv.1 j hj a b ha hb).1.2 hP') (h a ha hab),
-      simpa [Q', if_neg, hj, hbot] using maketop_lt_maketop (Q j) hab hX ha },
+      simpa [Q', if_neg, hj, hbot] using maketop_lt_maketop (Q j) hab ha },
     { convert hpiv.2.2.2.2.1 a ha hab },
     { refine (hpiv.1 j hj a b ha hb).1.1 ((hpiv.2.1 j).is_top 
-        (λ hbot, asymm (makebot_lt_makebot (Q j) hab hX ha) _) a ha hab), 
+        (λ hbot, asymm (makebot_lt_makebot (Q j) hab ha) _) a ha hab), 
       convert hQ'; simp [Q', if_neg hj, if_pos hbot] } },
   { refine ⟨λ hP, _, λ hQ', _⟩; by_cases hj : j = i,
     { simpa [Q', if_pos, hj] using makebetween_lt_makebetween_top hcb hyp },
@@ -391,11 +392,11 @@ begin
         cases hpiv.2.1 j with hbot htop,
         { exact (hbot d hd hdb).not_le h },
         { exact (irrefl _) ((htop c hc hcb).trans hP) } },
-      simpa [Q', if_neg hj, if_pos hbot] using makebot_lt_makebot (Q j) hcb hX hc },
+      simpa [Q', if_neg hj, if_pos hbot] using makebot_lt_makebot (Q j) hcb hc },
     { convert hpiv.2.2.2.1 c hc hcb },
     { by_contra hP,
       have hbot : ¬ is_bot b (P j) X := λ h, hP (h c hc hcb),
-      apply asymm (maketop_lt_maketop (Q j) hcb hX hc),
+      apply asymm (maketop_lt_maketop (Q j) hcb hc),
       convert hQ'; simp [Q', if_neg, hbot, hj] } },
 end
 

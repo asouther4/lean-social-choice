@@ -4,7 +4,7 @@ import tactic
 open relation vector finset
 
 --we think of social states as type σ and inidividuals as type ι
-variables {σ ι : Type} {x y x' y' a b : σ} {R R' : σ → σ → Prop} 
+variables {σ ι : Type*} {x y x' y' z a b : σ} {R R' : σ → σ → Prop} 
 
 ----------------------------------------------
 --Some Basic Definitions and Lemmas
@@ -14,13 +14,30 @@ variables {σ ι : Type} {x y x' y' a b : σ} {R R' : σ → σ → Prop}
 def is_pref_ordering (R : σ → σ → Prop) : Prop :=
 reflexive R ∧ total R ∧ transitive R
 
+
 --now, we have to define the 'strict' preference relation P
-def P (R : σ → σ → Prop) (x y : σ) : Prop := R x y ∧ ¬ R y x -- accepts a relation and two social states
+def P (R : σ → σ → Prop) (x y : σ) : Prop := R x y ∧ ¬R y x -- accepts a relation and two social states
+
+-- 'indifference' I
+def I (R : σ → σ → Prop) (x y : σ) : Prop := R x y ∧ R y x
+
+-- Sen lemma 1*a, (i) - (iv)
+lemma I_trans (htrans : transitive R) (h1 : I R x y) (h2 : I R y z) : I R x z :=
+⟨htrans h1.1 h2.1, htrans h2.2 h1.2⟩
+
+lemma P_trans_I (htrans : transitive R) (h1 : P R x y) (h2 : I R y z) : P R x z :=
+⟨htrans h1.1 h2.1, λ h, h1.2 (htrans h2.1 h)⟩
+
+lemma I_trans_P (htrans : transitive R) (h1 : I R x y) (h2 : P R y z) : P R x z :=
+⟨htrans h1.1 h2.1, λ h, h2.2 (htrans h h1.1)⟩
+
+lemma P_trans (htrans : transitive R) (h1 : P R x y) (h2 : P R y z) : P R x z :=
+⟨htrans h1.1 h2.1, λ h, h2.2 (htrans h h1.1)⟩
 
 def acyclical (R : σ → σ → Prop) : Prop := 
 ∀ x : σ, ¬trans_gen (P R) x x
 
-lemma R_of_nP_total (hR: total R) (h : ¬ P R y x) : R x y :=
+lemma R_of_nP_total (hR : total R) (h : ¬P R y x) : R x y :=
 begin
   by_cases hyp : R y x,
   exacts [not_and_not_right.mp h hyp, or_iff_not_imp_right.mp (hR x y) hyp],
@@ -95,7 +112,7 @@ begin
     obtain ⟨c, hc₁, hc₂⟩ := trans_gen.tail'_iff.mp b_in.2,
     refine hc₂.2 (hb c _),
     simp [b_in.1.head hc₂, hx.trans_left hc₁] },
-  { by_contra h,
+  { by_contra h, 
     suffices : ∃ c ∈ X, trans_gen (P R) c c, from let ⟨c, _, hc⟩ := this in h_acyc c hc,
     refine cyclical_of_no_highest (P R) X_ne (forall_exists_trans_gen _ (λ a a_in, _)),
     simp only [is_best_element, not_exists, not_forall] at h,

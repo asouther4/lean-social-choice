@@ -72,7 +72,7 @@ is_bot b p X ∨ is_top b p X
 def same_order (p₁ p₂ : σ → ℝ) (s₁ s₂ s₃ s₄ : σ) : Prop :=
 (p₁ s₁ < p₁ s₂ ↔ p₂ s₃ < p₂ s₄) ∧ (p₁ s₂ < p₁ s₁ ↔ p₂ s₄ < p₂ s₃)
 
-/-- An individual `i` is *pivotal* with respect to a social welfare function and a social state `b` 
+/-- An individual `i` is *pivotal* with respect to a social welfare function and a social state `b`
   if there exist rankings `P` and `P'` such that: 
   (1) all individuals except for `i` rank all social states in the same order in both rankings
   (2) all individuals place `b` in an extremal position in both rankings
@@ -81,7 +81,7 @@ def same_order (p₁ p₂ : σ → ℝ) (s₁ s₂ s₃ s₄ : σ) : Prop :=
 def is_pivotal (f : (ι → σ → ℝ) → (σ → ℝ)) (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∃ (P P' : ι → σ → ℝ),
   (∀ j : ι, j ≠ i → ∀ x y ∈ X, same_order (P j) (P' j) x y x y) ∧ 
-    (∀ i : ι, is_extremal b (P i) X) ∧ (∀ i : ι, is_extremal b (P' i) X) ∧
+    (∀ j : ι, is_extremal b (P j) X) ∧ (∀ j : ι, is_extremal b (P' j) X) ∧
       (is_bot b (P i) X) ∧ (is_top b (P' i) X) ∧ 
         (is_bot b (f P) X) ∧ (is_top b (f P') X)
 
@@ -115,7 +115,7 @@ update p b $ (p a + p c) / 2
 
 variables {a b c d : σ} {p : σ → ℝ} {P : ι → σ → ℝ} {f : (ι → σ → ℝ) → σ → ℝ} {X : finset σ}
 
-lemma exists_second_distinct_mem (hX : 2 ≤ X.card) (a_in : a ∈ X) : 
+lemma exists_second_distinct_mem (hX : 2 ≤ X.card) (a_in : a ∈ X) :
   ∃ b ∈ X, b ≠ a :=
 begin
   classical,
@@ -264,8 +264,8 @@ begin
   classical,
   by_contra hnot,
   obtain ⟨a, c, ha, hc, hab, hcb, hac, hPa, hPc⟩ := exists_of_not_extremal hX hb hnot,
-  refine ((not_lt.mp ((not_congr (hind b c hb hc P _ (λ i, ⟨λ hP, _, λ hP', _⟩))).mp 
-    hPc.not_lt)).trans (not_lt.mp ((not_congr (hind a b ha hb P _ (λ i, ⟨λ hP, _, λ hP', _⟩))).mp 
+  refine ((not_lt.mp ((not_congr (hind b c hb hc P _ (λ i, ⟨λ hP, _, λ hP', _⟩))).mp
+    hPc.not_lt)).trans (not_lt.mp ((not_congr (hind a b ha hb P _ (λ i, ⟨λ hP, _, λ hP', _⟩))).mp
       hPa.not_lt))).not_lt (hwp a c ha hc _ (λ i, _)),
   { exact λ j, if is_top b (P j) X then makebetween (P j) a c b else update (P j) c (P j a + 1) },
   { have h : ¬ is_top b (P i) X := λ h, asymm hP (h c hc hcb),

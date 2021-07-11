@@ -53,7 +53,7 @@ lemma same_order_of_reverseP_P' (hR : P R y x) (hR' : P R' y x) : same_order R R
 /- a social state is extremal with respect to a relation and a set of individuals
 if every individual ranks that social state either highest or lowest -/
 def is_extremal (R  : σ → σ → Prop) (X : finset σ) (s : σ) : Prop := 
-s ∈ X ∧ ((∀ t ∈ X, t ≠ s → P R t s) ∨ (∀ t ∈ X,  t ≠ s → P R s t))
+s ∈ X ∧ ((∀ t ∈ X, t ≠ s → P R t s) ∨ (∀ t ∈ X, t ≠ s → P R s t))
 
 
 ----------------------------

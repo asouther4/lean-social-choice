@@ -1,5 +1,3 @@
-import data.set.finite
-import tactic
 import basic
 
 open relation vector finset
@@ -113,176 +111,118 @@ or.inr hbot
 /- Next, we define the notion of a preference ordering. -/
 structure pref_order (α : Type*) := 
 (rel : α → α → Prop)
-(reflexive : reflexive rel)
+(refl : reflexive rel)
 (total : total rel)
-(transitive : transitive rel)
+(trans : transitive rel)
 
 instance (α : Type*) : has_coe_to_fun (pref_order α) := ⟨_, λ r, r.rel⟩
 
-lemma pref_order_eq_coe {α : Type*} (r :pref_order α) : r.rel = r := by refl
+lemma pref_order_eq_coe {α : Type*} (r :pref_order α) : r.rel = r := rfl
 
 /-- Given an arbitary preference order `r` and a social state `b`,
   `maketop r b` updates `r` so that `b` is now ranked strictly higher 
   than any other social state. 
   The definition also contains a proof that this new relation is a `pref_order σ`. --/
-def maketop [decidable_eq σ] 
-  (r : pref_order σ) (b : σ) : pref_order σ := 
+def maketop (r : pref_order σ) (b : σ) : pref_order σ := 
 begin
-let r' := λ x y,
-  if x = b then true else 
-    (if y = b then false else r x y),
-use r',
-{ intro x,
-    simp only [r', if_false_left_eq_and, if_true_left_eq_or],
+  use λ x y, if x = b then true else if y = b then false else r x y,
+  all_goals { intro x, simp only [if_false_left_eq_and, if_true_left_eq_or] },
+  { by_cases hx : x = b,
+    { exact or.inl hx },
+    { exact or.inr ⟨hx, r.refl x⟩ } },
+  { intro y,
     by_cases hx : x = b,
-    { left, exact hx, },
-    { right, exact ⟨hx, r.reflexive x⟩, }, },
-  { intros x y,
-    simp only [r', if_false_left_eq_and, if_true_left_eq_or],
-    by_cases hx : x = b,
-    { left, left, exact hx, },
+    { exact or.inl (or.inl hx) },
     { by_cases hy : y = b,
-      { right, left, exact hy, },
-      { cases r.total x y with h,
-        { left, right, exact ⟨hy, h⟩, },
-        { right, right, exact ⟨hx, h⟩, }, }, }, },
-  { intros x y z hxy hyz,
-    simp only [r', if_false_left_eq_and, if_true_left_eq_or] at *,
-    cases hxy,
-    { left, exact hxy },
+      { exact or.inr (or.inl hy) },
+      { cases r.total x y,
+        { exact or.inl (or.inr ⟨hy, h⟩) },
+        { exact or.inr (or.inr ⟨hx, h⟩) } } } },
+  { rintros y z (hxy | hxy) hyz,
+    { exact or.inl hxy },
     { cases hyz,
-      { exfalso, exact hxy.1 hyz, },
-      { right, exact ⟨hyz.1, (r.transitive hxy.2 hyz.2)⟩, } }, },
+      { exact absurd hyz hxy.1 },
+      { exact or.inr ⟨hyz.1, (r.trans hxy.2 hyz.2)⟩ } } },
 end  
 
 /-- Given an arbitary preference order `r` and a social state `b`,
   `makebot r b` updates `r` so that every other social state is now ranked 
   strictly higher than `b`. 
   The definition also contains a proof that this new relation is a `pref_order σ`. --/
-def makebot [decidable_eq σ] 
-  (r : pref_order σ) (b : σ) : pref_order σ := 
+def makebot (r : pref_order σ) (b : σ) : pref_order σ := 
 begin
-  let r' := λ x y,
-    if y = b then true 
-      else if x = b then false else r x y,
-  use r',
-  { intro x,
-    simp only [r', if_false_left_eq_and, if_true_left_eq_or],
+  use λ x y, if y = b then true else if x = b then false else r x y,
+  all_goals { intro x, simp only [if_false_left_eq_and, if_true_left_eq_or] },
+  { by_cases hx : x = b,
+    { exact or.inl hx },
+    { exact or.inr ⟨hx, r.refl x⟩ } },
+  { intro y,
     by_cases hx : x = b,
-    { left, exact hx },
-    { right, exact ⟨hx, r.reflexive x⟩, }, },
-  { intros x y,
-    simp only [r', if_false_left_eq_and, if_true_left_eq_or],
-    by_cases hx : x = b,
-    { right, left, exact hx, },
+    { exact or.inr (or.inl hx) },
     { by_cases hy : y = b,
-      { left, left, exact hy, },
-      { cases r.total x y with h,
-        { left, right, exact ⟨hx, h⟩, },
-        { right, right, exact ⟨hy, h⟩, }, }, }, },
-  { intros x y z hxy hyz,
-    simp only [r', if_false_left_eq_and, if_true_left_eq_or] at *,
-    cases hyz,
-    { left, exact hyz, },
+      { exact or.inl (or.inl hy) },
+      { cases r.total x y,
+        { exact or.inl (or.inr ⟨hx, h⟩) },
+        { exact or.inr (or.inr ⟨hy, h⟩) } } } },
+  { rintros y z hxy (hyz | hyz),
+    { exact or.inl hyz },
     { cases hxy,
-      { exfalso, exact hyz.1 hxy, },
-      { right, exact ⟨hxy.1, (r.transitive hxy.2 hyz.2)⟩, }, }, },
+      { exfalso, exact hyz.1 hxy },
+      { exact or.inr ⟨hxy.1, (r.trans hxy.2 hyz.2)⟩ } } },
 end
   
 open classical
 local attribute [instance] prop_decidable
 
-/-- Given an arbitary preference order `r`, two social states `a` & `b`, and 
-  a proof `a_neq_b : a ≠ b`, `makebot r a b a_neq_b` updates `r` so that: 
+/-- Given an arbitary preference order `r` and two social states `a` and `b`, 
+  `makebot r a b` updates `r` so that: 
   (1) `b` is strictly higher than `a` and any other social state `y` where `r a y`
   (2) any other social state that is strictly higher than `a` is strictly higher than `b`.
   Intuitively, we have moved `b` *just above* `a` in the ordering. 
   The definition also contains a proof that this new relation is a `pref_order σ`. --/
-def makejustabove [decidable_eq σ] 
-  (r : pref_order σ) (a b : σ) (a_neq_b : a ≠ b): pref_order σ := 
+def makejustabove (r : pref_order σ) (a b : σ) : pref_order σ := 
 begin
-  let r' := λ x y,
-    if x = b then
-      (if y = b 
-        then true 
-    else (if r a y 
-        then true
-    else 
-      false ) ) 
-  else
-    (if y = b then
-      (if r a x then false
-    else true)
-    else r x y),
-  use r',
-  { intro x,  
-    simp only [r', if_false_left_eq_and, and_true, 
-      if_true_left_eq_or, if_false_right_eq_and],
+  use λ x y, if x = b then if y = b then true else if r a y then true else false 
+             else if y = b then if r a x then false else true else r x y,
+  all_goals { intro x, 
+    simp only [if_false_left_eq_and, and_true, if_true_left_eq_or, if_false_right_eq_and] },
+  { by_cases hx : x = b,
+    { simp [hx] },
+    { simpa only [if_neg hx] using r.refl x } },
+  { intro y,
     by_cases hx : x = b,
-    { rw [if_pos hx], left, exact hx, },
-    { rw [if_neg hx, if_neg hx], exact r.reflexive x, }, },
-  { intros x y,
-    simp only [r', if_false_left_eq_and, and_true, 
-      if_true_left_eq_or, if_false_right_eq_and],
+    { simp_rw if_pos hx,
+      by_cases hy : y = b,
+      { exact or.inl (or.inl hy) },
+      { by_cases ha : r a y; simp [ha, if_neg hy] } },
+    { simp_rw if_neg hx,
+      by_cases hy : y = b,
+      { by_cases ha : r a x; simp [ha, if_pos hy] },
+      { simp_rw if_neg hy,
+        cases r.total x y,
+        { exact or.inl h },
+        { exact or.inr h } } } },
+  { intros y z hxy hyz,
     by_cases hx : x = b,
-    { by_cases hy : y = b,
-      rw [if_pos hx],
-      { left, left, exact hy, },
-      { by_cases ha : r a y,
-        { left, rw if_pos hx,
-          right, exact ha, },
-        { right, 
-          rw [if_neg hy, if_pos hx],
-          exact ha, }, }, },
-    { by_cases hy : y = b,
-      { by_cases ha : r a x,
-        { right, rw if_pos hy,
-          right, exact ha, },
-        { left, 
-          rw [if_neg hx, if_pos hy],
-          exact ha, }, },
-      { cases r.total x y,
-        { left, 
-          rw [if_neg hx, if_neg hy],
-          exact h, },
-        { right,
-          rw [if_neg hx, if_neg hy],
-          exact h, }, }, }, },
-  { intros x y z hxy hyz,
-    simp only [r', if_false_left_eq_and, and_true, 
-      if_true_left_eq_or, if_false_right_eq_and] at *,
-    by_cases hx : x = b,
-    { by_cases hz : z = b,
-      { rw if_pos hx,
-        left, exact hz, },
+    { simp_rw if_pos hx at hxy ⊢,
+      by_cases hz : z = b,
+      { exact or.inl hz },
       { by_cases hy : y = b,
-        { rw if_pos hy at hyz,
-          rw if_pos hx,
-          right, exact hyz.resolve_left hz, },
-        { rw if_pos hx at hxy,
-          rw if_neg hy at hyz,
-          rw if_neg hz at hyz,
-          rw if_pos hx,
-          right,
-          exact r.transitive (hxy.resolve_left hy) hyz, }, }, },
-    { by_cases hz : z = b,
+        { rwa if_pos hy at hyz },
+        { rw [if_neg hy, if_neg hz] at hyz,
+          exact or.inr (r.trans (hxy.resolve_left hy) hyz) } } },
+    { simp_rw if_neg hx at hxy ⊢,
+      by_cases hz : z = b,
       { by_cases hy : y = b,
-        { rw [if_neg hx, if_pos hy] at hxy,
-          rw [if_neg hx, if_pos hz],
-          exact hxy, },
-        { rw [if_neg hx, if_pos hz],
-          rw [if_neg hx, if_neg hy] at hxy,
-          rw [if_neg hy, if_pos hz] at hyz,
-          by_contradiction hax,
-          exact hyz (r.transitive hax hxy), }, },
-      { rw [if_neg hx, if_neg hz],
+        { simpa [hy, hz] using hxy },
+        { simp_rw [if_neg hy, if_pos hz] at hxy hyz ⊢,
+          exact λ hax, hyz (r.trans hax hxy) } },
+      { rw if_neg hz at hyz ⊢,
         by_cases hy : y = b,
-        { rw [if_neg hx, if_pos hy] at hxy,
-          rw if_pos hy at hyz,
-          exact r.transitive ((r.total a x).resolve_left hxy) (hyz.resolve_left hz), },
-        { rw [if_neg hx, if_neg hy] at hxy,
-          rw [if_neg hy, if_neg hz] at hyz,
-          exact r.transitive hxy hyz, }, }, },},
+        { rw if_pos hy at hxy hyz,
+          exact r.trans ((r.total a x).resolve_left hxy) (hyz.resolve_left hz) },
+        { rw if_neg hy at hxy hyz,
+          exact r.trans hxy hyz } } } },
 end 
 
 section make
@@ -362,12 +302,12 @@ begin
 end
 
 lemma makejustabove_noteq (R : pref_order σ) (a b c d: σ) (ha : a ≠ b) (hc : c ≠ b) (hd : d ≠ b):
-((makejustabove R a b ha) c d ↔ R c d) ∧ ((makejustabove R a b ha) d c ↔ R d c) :=
+((makejustabove R a b) c d ↔ R c d) ∧ ((makejustabove R a b) d c ↔ R d c) :=
 by simp only [makejustabove, ← pref_order_eq_coe, if_neg hc, if_neg hd, iff_self, and_self]
 
 
 lemma makejustabove_noteq' (r : pref_order σ) (a b c d: σ) (ha : a ≠ b) (hc : c ≠ b) (hd : d ≠ b):
-(P (makejustabove r a b ha) c d ↔ P r c d) ∧ (P (makejustabove r a b ha) d c ↔ P r d c) :=
+(P (makejustabove r a b) c d ↔ P r c d) ∧ (P (makejustabove r a b) d c ↔ P r d c) :=
 by simp only [makejustabove, ← pref_order_eq_coe, if_neg hc, if_neg hd, P, iff_self, and_self]
 
 lemma is_top_of_maketop (b : σ) (r : pref_order σ) (X : finset σ) :
@@ -384,21 +324,21 @@ by simp only [is_bot, makebot, P, ←pref_order_eq_coe, true_and, if_false_left_
 
 /- # TODO: new name -/
 lemma lt_makejustabove (a b : σ) (r: pref_order σ) (a_neq_b: a ≠ b):
-P (makejustabove r a b a_neq_b) b a :=
+P (makejustabove r a b) b a :=
 begin
   
   simp only [P, makejustabove, ←pref_order_eq_coe, if_false_left_eq_and, 
     and_true, if_true, true_or, eq_self_iff_true,
       if_true_left_eq_or, if_false_right_eq_and],
   push_neg,
-  refine ⟨ _, ⟨a_neq_b, r.reflexive a⟩ ⟩,
-  right, exact r.reflexive a, 
+  refine ⟨ _, ⟨a_neq_b, r.refl a⟩ ⟩,
+  right, exact r.refl a, 
 end
 
 /- # TODO NEW NAME -/
 lemma makejustabove_bla {a b c : σ} (r : pref_order σ) 
   (a_neq_b : a ≠ b) (c_neq_b : c ≠ b) (hr : P r c a) :
-P (makejustabove r a b a_neq_b) c b :=
+P (makejustabove r a b) c b :=
 begin
   simp only [P, makejustabove, ←pref_order_eq_coe, if_false_left_eq_and, 
     and_true, if_true, true_or, eq_self_iff_true,
@@ -468,7 +408,7 @@ end
 
 /--- The Proof Begins ---/
 
-lemma first_step { R : ι → pref_order σ }
+lemma first_step {R : ι → pref_order σ}
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b_in : b ∈ X) (hextr : ∀ i, is_extremal b (R i) X) :
   is_extremal b (f R) X :=
@@ -477,14 +417,16 @@ begin
   by_contra hnot,
   have := exists_of_not_extremal hX b_in,
   obtain ⟨a, c, a_in, c_in, hab, hcb, hac, hfa, hfb⟩ := this hnot,
-  let R' := λ j, makejustabove (R j) a c hac,
+  let R' := λ j, makejustabove (R j) a c,
   have hfR'ab : f R' a b,
   { sorry, },
   sorry, 
+  sorry,
 end
 
 /- NOTE: the proof of `first_step` below is now deprecated, and it'll take a good bit of work to fix. 
   But I am keeping it here now for future reference. -- Andrew 
+
 lemma first_step (hf : is_arrovian f X N) (hX : 3 ≤ card X) (b : σ) (b_in : b ∈ X) (R : (ι → σ → σ → Prop))
   (hyp : ∀ i ∈ N, is_extremal (R i) X b) :
   is_extremal (f R) X b :=
@@ -645,7 +587,7 @@ begin
   classical,
   let Q' : ι → pref_order σ:= λ j, 
     if j = i 
-      then makejustabove (Q j) a b a_neq_b
+      then makejustabove (Q j) a b
     else 
       if is_bot b (R j) X
         then makebot (Q j) b
@@ -770,7 +712,7 @@ begin
   have h₂ : P (f Q') c b,
   { apply (hind R Q' b c b_in c_in hQ'bc).1.1,
     exact i_piv.2.2.2.2.2.1 c c_in c_neq_b },
-  exact P_trans (f Q').transitive h₂ h₁,
+  exact P_trans (f Q').trans h₂ h₁,
 end
 
 /- NOTE: this proof is deprecated for now, but it should be easy to fix.-- Andrew -/
@@ -814,3 +756,5 @@ end
 theorem arrow [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
 is_dictatorship f X := fourth_step hwp hind hX $ second_step hwp hind hX
+
+#lint

@@ -365,28 +365,13 @@ end
 
 def second_step_rel (b : σ) : pref_order σ :=
 begin
-  let r := λ x y,
-    if y = b 
-      then true 
-    else
-      (if x = b then false else true),
-  use r,
-  { intro x,
-    simp only [r, if_false_left_eq_and, and_true, if_true_left_eq_or],
-    exact classical.em (x = b), },
-  { intros x y,
-    simp only [r, if_false_left_eq_and, and_true, if_true_left_eq_or],
-    by_cases hy : y = b,
-    { left, left, exact hy, },
-    { right, right, exact hy, }, },
-  { intros x y z hxy hyz,
-    simp only [r, if_false_left_eq_and, and_true, if_true_left_eq_or] at *,
-    cases hyz,
-    { left, exact hyz, },
-    { right, exact hxy.resolve_left hyz, }, },
+  use λ x y, if y = b then true else if x = b then false else true,
+  { intro x, split_ifs; trivial },
+  { intros x y, simp only, split_ifs; simp only [true_or, or_true] },
+  { intros x y z, simp only, split_ifs; simp only [forall_true_left, forall_false_left] },
 end
 
-lemma second_step_aux [fintype ι] 
+lemma second_step_aux [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 2 < X.card) (b_in : b ∈ X) {D' : finset ι} :
   ∀ {R : ι → pref_order σ}, D' = {i ∈ univ | is_bot b (R i) X} → 

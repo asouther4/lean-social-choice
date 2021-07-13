@@ -116,7 +116,7 @@ structure pref_order (α : Type*) :=
 
 instance (α : Type*) : has_coe_to_fun (pref_order α) := ⟨_, λ r, r.rel⟩
 
-lemma pref_order_eq_coe {α : Type*} (r :pref_order α) : r.rel = r := rfl
+lemma pref_order_eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
 
 /-- Given an arbitary preference order `r` and a social state `b`,
   `maketop r b` updates `r` so that `b` is now ranked strictly higher 
@@ -181,12 +181,12 @@ begin
     work_on_goal 5 { exact r.total x y }, 
     all_goals { simp only [or_true, true_or] } },
   { intros x y z, simp only,
-    split_ifs with hx hy _ _ h1 hz h2 _ _ hy h3 _ _ hz h4 hz h5; intros h6 h7,
+    split_ifs with hx hy _ _ hay hz haz _ _ hy hax _ _ hz haz hz hay; intros hxy hyz,
     any_goals { trivial },
-    { exact h2 (r.trans h1 h7) },
-    { exact r.trans ((r.total a x).resolve_left h3) h4 },
-    { exact h5 (r.trans h h6) },
-    { exact r.trans h6 h7 } },
+    { exact haz (r.trans hay hyz) },
+    { exact r.trans ((r.total a x).resolve_left hax) haz }, -- isolate
+    { exact hay (r.trans h hxy) },
+    { exact r.trans hxy hyz } },
 end 
 
 section make
@@ -194,7 +194,7 @@ section make
 variable [decidable_eq σ]
 
 lemma maketop_noteq (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠ b) :
-  ((maketop r b) a c ↔ r a c) ∧ ((maketop r b) c a ↔ r c a) := 
+  (maketop r b a c ↔ r a c) ∧ (maketop r b c a ↔ r c a) := 
 begin
   simp only [maketop, if_false_left_eq_and, if_true_left_eq_or],
   refine ⟨⟨_, λ h, or.inr ⟨hc, h⟩⟩, ⟨_, λ h, or.inr ⟨ha, h⟩⟩⟩; rintro (rfl | ⟨-, h⟩),
@@ -206,7 +206,7 @@ lemma maketop_noteq' (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠
 let h := maketop_noteq r ha hc in P_iff_of_iff h.1 h.2
 
 lemma makebot_noteq (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠ b) :
-  ((makebot r b) a c ↔ r a c) ∧ ((makebot r b) c a ↔ r c a) := 
+  (makebot r b a c ↔ r a c) ∧ (makebot r b c a ↔ r c a) := 
 begin
   simp only [makebot, if_false_left_eq_and, if_true_left_eq_or],
   refine ⟨⟨_, λ h, or.inr ⟨ha, h⟩⟩, ⟨_, λ h, or.inr ⟨hc, h⟩⟩⟩; rintro (rfl | ⟨-, h⟩),
@@ -234,37 +234,19 @@ lemma is_bot_of_makebot (b : σ) (r : pref_order σ) (X : finset σ) :
 by simp [is_bot, makebot, P, ←pref_order_eq_coe]
 
 /- # TODO: new name -/
-lemma lt_makejustabove (a b : σ) (r: pref_order σ) (a_neq_b: a ≠ b):
+lemma lt_makejustabove {a b : σ} (r : pref_order σ) (h : a ≠ b):
   P (makejustabove r a b) b a :=
-begin
-  simp only [P, makejustabove, ←pref_order_eq_coe, if_false_left_eq_and, 
-    and_true, if_true, true_or, eq_self_iff_true,
-      if_true_left_eq_or, if_false_right_eq_and],
-  push_neg,
-  refine ⟨ _, ⟨a_neq_b, r.refl a⟩ ⟩,
-  right, exact r.refl a, 
-end
+by simpa [P, makejustabove, ←pref_order_eq_coe, not_or_distrib, h] using r.refl a
 
 /- # TODO NEW NAME -/
-lemma makejustabove_bla {a b c : σ} (r : pref_order σ) 
-  (a_neq_b : a ≠ b) (c_neq_b : c ≠ b) (hr : P r c a) :
+lemma makejustabove_bla {a b c : σ} (r : pref_order σ) (h : c ≠ b) (hr : ¬r a c) :
   P (makejustabove r a b) c b :=
-begin
-  simp only [P, makejustabove, ←pref_order_eq_coe, if_false_left_eq_and, 
-    and_true, if_true, true_or, eq_self_iff_true,
-      if_true_left_eq_or, if_false_right_eq_and],
-  push_neg,
-  refine ⟨ _, ⟨c_neq_b, hr.2⟩ ⟩,
-    right, exact hr.2,
-end
+by simpa [P, makejustabove, ←pref_order_eq_coe, not_or_distrib, h]
 
 end make
 
-variables {R : ι → pref_order σ}
-          {f : (ι → pref_order σ) → pref_order σ} 
-
 def weak_pareto (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) : Prop := 
-∀ (x y ∈ X) (R : ι → pref_order σ), (∀ i : ι,  P (R i) x y) → P (f R) x y
+∀ (x y ∈ X) (R : ι → pref_order σ), (∀ i : ι, P (R i) x y) → P (f R) x y
 
 def ind_of_irr_alts (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) : Prop :=
 ∀ (R R' : ι → pref_order σ) (x y ∈ X), (∀ i : ι, same_order' (R i) (R' i) x y x y) → 
@@ -293,6 +275,8 @@ def is_dictator_except (f : (ι → pref_order σ) → pref_order σ)
 
 
 -- # Further Lemmas
+
+variables {R : ι → pref_order σ} {f : (ι → pref_order σ) → pref_order σ} 
 
 /-- If every individual ranks a social state `b` at the top of its rankings, then society must also
   rank `b` at the top of its rankings. -/
@@ -432,9 +416,9 @@ begin
   { simpa using eq_empty_iff_forall_not_mem.mp h.symm j, },
   { have hX' := nonempty_of_mem b_in,
     let R' := λ j, (ite (j = i) (maketop (R j) b) (R j)),
-    have hextr' : ∀ j, is_extremal b (R' j)  X,
+    have hextr' : ∀ j, is_extremal b (R' j) X,
     { intro j,
-      by_cases hji : j = i,
+      by_cases hji : j = i, -- use split_ifs
       { refine or.inr (λ a a_in hab, _),
         simp only [R', if_pos hji, (is_top_of_maketop b (R j) X) a a_in hab], },
       { simp only [R', if_neg hji, hextr j], }, },
@@ -517,7 +501,7 @@ begin
   { refine (λ j, ⟨⟨λ hP, _, λ hQ', _⟩, ⟨λ hP, _, λ hQ', _⟩⟩ ); by_cases hj : j = i,
     { simp [Q', if_pos hj],
       rw ← hj at hyp,
-      exact makejustabove_bla (Q j) a_neq_b c_neq_b hyp, },  
+      exact makejustabove_bla (Q j) c_neq_b hyp.2, },  
     { simp [Q', if_neg hj],
       have b_bot : is_bot b (R j) X,
       { unfold is_bot,
@@ -550,7 +534,7 @@ begin
       simp only at hQ',
       simp [Q', if_pos hj] at hQ',
       rw hj at hQ',
-      exact hQ'.2 (makejustabove_bla (Q i) a_neq_b c_neq_b hyp).1, },
+      exact hQ'.2 (makejustabove_bla (Q i) c_neq_b hyp.2).1, },
     { by_contradiction hR,
       have b_bot : is_bot b (R j) X,
       { refine is_extremal.is_bot (i_piv.2.1 j) _,
@@ -564,7 +548,7 @@ begin
     { simp [Q'],
       rw if_pos hj,
       rw ← hj at hyp,
-      have := lt_makejustabove a b (Q j),
+      have := lt_makejustabove (Q j),
       exact (this a_neq_b), },
     { simp [Q'],
       have not_bot : ¬ is_bot b (R j) X,
@@ -600,7 +584,7 @@ begin
       { exfalso,
         simp only at hQ',
         simp only [Q', dite_eq_ite, if_pos hj] at hQ',
-        exact hQ'.2 (lt_makejustabove a b (Q j) a_neq_b).1, },
+        exact hQ'.2 (lt_makejustabove (Q j) a_neq_b).1, },
       { simp only at hQ', 
         simp only [Q', dite_eq_ite, if_neg hj] at hQ',
         have b_bot : (is_bot b (R j) X),

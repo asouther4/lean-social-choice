@@ -214,25 +214,21 @@ lemma makejustabove_noteq' (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠
   (P (makejustabove r a b) c d ↔ P r c d) ∧ (P (makejustabove r a b) d c ↔ P r d c) :=
 by simp [makejustabove, P, ← pref_order_eq_coe, hc, hd]
 
--- TODO: new name
-lemma is_top_of_maketop (b : σ) (r : pref_order σ) (X : finset σ) :
+lemma is_top_maketop (b : σ) (r : pref_order σ) (X : finset σ) :
   is_top b (maketop r b) X :=
-by simp [maketop, is_top, P, ←pref_order_eq_coe]
+by simp [maketop, is_top, P, ← pref_order_eq_coe]
 
--- TODO: new name
-lemma is_bot_of_makebot (b : σ) (r : pref_order σ) (X : finset σ) :
+lemma is_bot_makebot (b : σ) (r : pref_order σ) (X : finset σ) :
   is_bot b (makebot r b) X :=
-by simp [is_bot, makebot, P, ←pref_order_eq_coe]
+by simp [is_bot, makebot, P, ← pref_order_eq_coe]
 
--- TODO: new name
-lemma lt_makejustabove {a b : σ} (r : pref_order σ) (ha : a ≠ b):
+lemma makejustabove_above {a b : σ} (r : pref_order σ) (ha : a ≠ b):
   P (makejustabove r a b) b a :=
-by simpa [P, makejustabove, ←pref_order_eq_coe, not_or_distrib, ha] using r.refl a
+by simpa [P, makejustabove, ← pref_order_eq_coe, not_or_distrib, ha] using r.refl a
 
---TODO: new name
-lemma makejustabove_bla {a b c : σ} (r : pref_order σ) (hc : c ≠ b) (hr : ¬r a c) :
+lemma makejustabove_below {a b c : σ} {r : pref_order σ} (hc : c ≠ b) (hr : ¬r a c) :
   P (makejustabove r a b) c b :=
-by simpa [P, makejustabove, ←pref_order_eq_coe, not_or_distrib, hc]
+by simpa [P, makejustabove, ← pref_order_eq_coe, not_or_distrib, hc]
 
 /-! ### Properties -/
 
@@ -263,10 +259,9 @@ def is_dictator_except (f : (ι → pref_order σ) → pref_order σ)
   (X : finset σ) (i : ι) (b : σ) : Prop := 
 ∀ a c ∈ X, a ≠ b → c ≠ b → ∀ R : ι → pref_order σ, P (R i) c a → P (f R) c a 
 
+variables {R : ι → pref_order σ} {f : (ι → pref_order σ) → pref_order σ} 
 
 /-! ### Auxiliary lemmas -/
-
-variables {R : ι → pref_order σ} {f : (ι → pref_order σ) → pref_order σ} 
 
 /-- If every individual ranks a social state `b` at the top of its rankings, then society must also
   rank `b` at the top of its rankings. -/
@@ -366,7 +361,6 @@ begin
   have h_trans := (hf.2.2.2 (R₂)).2.2 (same_order_ba.1.2.1 ha) (same_order_bc.1.1.1 hc),
   exact h_pareto.2 h_trans,
 end
-
 -/
 
 def second_step_rel (b : σ) : pref_order σ :=
@@ -409,7 +403,7 @@ begin
     { intro j,
       by_cases hji : j = i, -- use split_ifs
       { refine or.inr (λ a a_in hab, _),
-        simp only [R', if_pos hji, (is_top_of_maketop b (R j) X) a a_in hab], },
+        simp only [R', if_pos hji, (is_top_maketop b (R j) X) a a_in hab], },
       { simp only [R', if_neg hji, hextr j], }, },
     by_cases hR' : is_top b (f R') X,
     { refine ⟨i, R, R', λ j hj x y _ _, _, hextr, hextr', _, _, hbot, hR'⟩,
@@ -417,7 +411,7 @@ begin
       { have : i ∈ {j ∈ univ | is_bot b (R j) X} := 
         by rw ← h_insert; exact mem_insert_self i D,
         simpa, },
-      { simp only [R', is_top_of_maketop, if_pos], }, },
+      { simp only [R', is_top_maketop, if_pos], }, },
     { refine IH _ hextr' ((first_step hwp hind hX b_in hextr').is_bot hR'),
       ext j,
       simp only [true_and, sep_def, mem_filter, mem_univ, R'],
@@ -431,7 +425,7 @@ begin
         { rintro rfl,
           obtain ⟨a, a_in, hab⟩ := exists_second_distinct_mem hX.le b_in,
           simp only [if_pos] at hj,
-          exact (is_top_of_maketop b (R j) X a a_in hab).2 (hj a a_in hab).1, },
+          exact (is_top_maketop b (R j) X a a_in hab).2 (hj a a_in hab).1, },
         rw [← erase_insert hi, h_insert],
         simpa [hji] using hj, }, } },
 end
@@ -487,7 +481,7 @@ begin
   { refine (λ j, ⟨⟨λ hP, _, λ hQ', _⟩, ⟨λ hP, _, λ hQ', _⟩⟩ ); by_cases hj : j = i,
     { simp [Q', if_pos hj],
       rw ← hj at hyp,
-      exact makejustabove_bla (Q j) c_neq_b hyp.2, },  
+      exact makejustabove_below c_neq_b hyp.2, },  
     { simp [Q', if_neg hj],
       have b_bot : is_bot b (R j) X,
       { unfold is_bot,
@@ -497,13 +491,13 @@ begin
         { exact hd (h d d_in d_neq_b), },
         { exact hP.2 (h c c_in c_neq_b).1, }, },
       rw if_pos b_bot,
-      exact (is_bot_of_makebot b (Q j) X) c c_in c_neq_b, },
+      exact (is_bot_makebot b (Q j) X) c c_in c_neq_b, },
     { convert i_piv.2.2.2.1 c c_in c_neq_b, }, 
     { by_contradiction hP,
       have not_bot : ¬ is_bot b (R j) X := by simp only 
         [is_bot, exists_prop, ne.def, not_forall];
           exact ⟨c, c_in, c_neq_b, hP⟩,
-      apply nP_of_reverseP ((is_top_of_maketop b (Q j) X) c c_in c_neq_b),
+      apply nP_of_reverseP ((is_top_maketop b (Q j) X) c c_in c_neq_b),
       convert hQ',
       simp [Q', if_neg, not_bot, hj], }, 
     { exfalso,
@@ -515,12 +509,12 @@ begin
         specialize b_bot c c_in c_neq_b,
         exact hP.2 b_bot.1, },
       rw if_neg not_bot,
-      exact is_top_of_maketop b (Q j) X c c_in c_neq_b, },
+      exact is_top_maketop b (Q j) X c c_in c_neq_b, },
     { exfalso,
       simp only at hQ',
       simp [Q', if_pos hj] at hQ',
       rw hj at hQ',
-      exact hQ'.2 (makejustabove_bla (Q i) c_neq_b hyp.2).1, },
+      exact hQ'.2 (makejustabove_below c_neq_b hyp.2).1, },
     { by_contradiction hR,
       have b_bot : is_bot b (R j) X,
       { refine is_extremal.is_bot (i_piv.2.1 j) _,
@@ -528,13 +522,13 @@ begin
         exact ⟨c, c_in, c_neq_b, hR⟩, },
       simp only at hQ',
       simp only [Q', if_neg hj, if_pos b_bot] at hQ',
-      exact hQ'.2 (is_bot_of_makebot b (Q j) X c c_in c_neq_b).1, }, }, 
+      exact hQ'.2 (is_bot_makebot b (Q j) X c c_in c_neq_b).1, }, }, 
   have hQ'ab : ∀ j, (P (R' j) b a ↔ P (Q' j) b a) ∧ (P (R' j) a b ↔ P (Q' j) a b),
   { refine (λ j, ⟨⟨λ hP', _, λ hQ', _⟩, ⟨λ hP', _, λ hQ', _⟩ ⟩); by_cases hj : j = i,
     { simp [Q'],
       rw if_pos hj,
       rw ← hj at hyp,
-      have := lt_makejustabove (Q j),
+      have := makejustabove_above (Q j),
       exact (this a_neq_b), },
     { simp [Q'],
       have not_bot : ¬ is_bot b (R j) X,
@@ -542,7 +536,7 @@ begin
         simp only [is_bot, exists_prop, ne.def, not_forall],
         exact ⟨a, a_in, a_neq_b,  nP_of_reverseP hP'⟩, },
       rw [if_neg hj, if_neg not_bot],
-      exact (is_top_of_maketop b (Q j) X) a a_in a_neq_b, },
+      exact (is_top_maketop b (Q j) X) a a_in a_neq_b, },
     { convert i_piv.2.2.2.2.1 a a_in a_neq_b, },
     { simp only at hQ', 
       simp only [Q', dite_eq_ite, if_neg hj] at hQ',
@@ -550,7 +544,7 @@ begin
       { by_contradiction b_bot, 
         rw if_pos b_bot at hQ',
         apply (nP_of_reverseP hQ'),
-        exact (is_bot_of_makebot b (Q j) X) a a_in a_neq_b, },
+        exact (is_bot_makebot b (Q j) X) a a_in a_neq_b, },
       rw if_neg not_bot at hQ',
       rw ← (i_piv.1 j hj a b a_in b_in),
       have b_top : is_top b (R j) X := 
@@ -566,17 +560,17 @@ begin
           simp only [is_top, exists_prop, ne.def, not_forall],
           exact ⟨a, a_in, a_neq_b, nP_of_reverseP hP'⟩, }, 
         rw [if_neg hj, if_pos b_bot],
-        exact is_bot_of_makebot b (Q j) X a a_in a_neq_b, },
+        exact is_bot_makebot b (Q j) X a a_in a_neq_b, },
       { exfalso,
         simp only at hQ',
         simp only [Q', dite_eq_ite, if_pos hj] at hQ',
-        exact hQ'.2 (lt_makejustabove (Q j) a_neq_b).1, },
+        exact hQ'.2 (makejustabove_above (Q j) a_neq_b).1, },
       { simp only at hQ', 
         simp only [Q', dite_eq_ite, if_neg hj] at hQ',
         have b_bot : (is_bot b (R j) X),
         { by_contradiction b_bot, 
           rw if_neg b_bot at hQ',
-          exact hQ'.2 (is_top_of_maketop b (Q j) X a a_in a_neq_b).1,},
+          exact hQ'.2 (is_top_maketop b (Q j) X a a_in a_neq_b).1,},
         rw ← (i_piv.1 j hj a b a_in b_in),
         exact b_bot a a_in a_neq_b, },},
   have hQQ' : ∀ j, (P (Q j) c a ↔ P (Q' j) c a) ∧ (P (Q j) a c ↔ P (Q' j) a c),

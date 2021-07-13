@@ -12,7 +12,10 @@ structure pref_order (α : Type*) :=
 
 instance (α : Type*) : has_coe_to_fun (pref_order α) := ⟨_, λ r, r.rel⟩
 
-lemma pref_order_eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
+lemma pref_order.eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
+
+lemma pref_order.reverse {α : Type*} {r : pref_order α} {a b : α} (h : ¬r a b) : r b a :=
+(r.total a b).resolve_left h
 
 -- We think of social states as type `σ` and inidividuals as type `ι`
 variables {σ ι : Type} {x y x' y' a b : σ} {r r' : σ → σ → Prop} {X : finset σ}
@@ -173,7 +176,7 @@ begin
     split_ifs with hx hy _ _ hay hz haz _ _ hy hax _ _ hz haz hz hay; intros hxy hyz,
     any_goals { trivial },
     { exact haz (r.trans hay hyz) },
-    { exact r.trans ((r.total a x).resolve_left hax) haz }, -- isolate
+    { exact r.trans (pref_order.reverse hax) haz },
     { exact hay (r.trans h hxy) },
     { exact r.trans hxy hyz } },
 end 
@@ -204,27 +207,27 @@ let h := makebot_noteq r ha hc in P_iff_of_iff h.1 h.2
 
 lemma makeabove_noteq (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
   ((makeabove r a b) c d ↔ r c d) ∧ ((makeabove r a b) d c ↔ r d c) :=
-by simp [makeabove, ← pref_order_eq_coe, hc, hd]
+by simp [makeabove, ← pref_order.eq_coe, hc, hd]
 
 lemma makeabove_noteq' (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
   (P (makeabove r a b) c d ↔ P r c d) ∧ (P (makeabove r a b) d c ↔ P r d c) :=
-by simp [makeabove, P, ← pref_order_eq_coe, hc, hd]
+by simp [makeabove, P, ← pref_order.eq_coe, hc, hd]
 
 lemma is_top_maketop (b : σ) (r : pref_order σ) (X : finset σ) :
   is_top b (maketop r b) X :=
-by simp [maketop, is_top, P, ← pref_order_eq_coe]
+by simp [maketop, is_top, P, ← pref_order.eq_coe]
 
 lemma is_bot_makebot (b : σ) (r : pref_order σ) (X : finset σ) :
   is_bot b (makebot r b) X :=
-by simp [is_bot, makebot, P, ← pref_order_eq_coe]
+by simp [is_bot, makebot, P, ← pref_order.eq_coe]
 
 lemma makeabove_above {a b : σ} (r : pref_order σ) (ha : a ≠ b):
   P (makeabove r a b) b a :=
-by simpa [P, makeabove, ← pref_order_eq_coe, not_or_distrib, ha] using r.refl a
+by simpa [P, makeabove, ← pref_order.eq_coe, not_or_distrib, ha] using r.refl a
 
 lemma makeabove_below {a b c : σ} {r : pref_order σ} (hc : c ≠ b) (hr : ¬r a c) :
   P (makeabove r a b) c b :=
-by simpa [P, makeabove, ← pref_order_eq_coe, not_or_distrib, hc]
+by simpa [P, makeabove, ← pref_order.eq_coe, not_or_distrib, hc]
 
 /-! ### Properties -/
 
@@ -418,7 +421,7 @@ has_pivot f X b :=
 begin
   classical,
   have hbot : is_bot b (second_step_rel b) X,
-  { simp only [is_bot, second_step_rel, P, ←pref_order_eq_coe, 
+  { simp only [is_bot, second_step_rel, P, ←pref_order.eq_coe, 
       true_and, if_false_left_eq_and, imp_self, and_true, implies_true_iff, 
         true_or, eq_self_iff_true, not_true, or_false, if_true_left_eq_or], },
   let R : ι → pref_order σ := λ j, second_step_rel b,
@@ -585,7 +588,7 @@ begin
     { by_contra hji,
       obtain ⟨R, R', hso, hextr, -, -, -, hbot, htop⟩ := i_piv,
       have h₁ := hdict b a b_in a_in hbc hac R',
-      have h₂  := (hextr j).resolve_left,
+      have h₂ := (hextr j).is_top,
       rw ← (hso j hji a b a_in b_in) at h₁,
       refine (htop a a_in hab).2 (h₁ _).1,
       by_contra hnot,

@@ -2,49 +2,23 @@ import basic
 
 open relation vector finset
 
---we think of social states as type σ and inidividuals as type ι
-variables {σ ι : Type}
+/-! ### Definition of a preference ordering. -/
 
-variables {x y x' y' a b : σ} -- social states
-          {r r' : σ → σ → Prop} --relations between social states (Andrew did I get this right?)
-          {X : finset σ}
+structure pref_order (α : Type*) := 
+(rel : α → α → Prop)
+(refl : reflexive rel)
+(total : total rel)
+(trans : transitive rel)
 
-----------------------------------------------
---Some Basic Definitions 
-----------------------------------------------
+instance (α : Type*) : has_coe_to_fun (pref_order α) := ⟨_, λ r, r.rel⟩
 
-/- Alternate defintion of `same_order`. Can be interchanged with the original, as 
-the lemma below shows. -/
-def same_order' (r r' : σ → σ → Prop) (s₁ s₂ s₃ s₄ : σ) : Prop :=
-(P r s₂ s₁ ↔ P r' s₄ s₃) ∧ (P r s₁ s₂ ↔ P r' s₃ s₄)
+lemma pref_order_eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
 
+-- We think of social states as type `σ` and inidividuals as type `ι`
+variables {σ ι : Type} {x y x' y' a b : σ} {r r' : σ → σ → Prop} {X : finset σ}
 
-lemma P_iff_of_iff (h₁ : r a b ↔ r' a b) (h₂ : r b a ↔ r' b a) : 
-  (P r a b ↔ P r' a b) ∧ (P r b a ↔ P r' b a) :=
-begin
-  simp only [P],
-  rw [h₁, h₂],
-  simp only [iff_self, and_self],
-end
-
-
-/-- A social state `b` is *bottom* of a finite set of social states `X` with respect to 
-  a ranking `p` if `b` is ranked strictly lower than every other `a ∈ X`. -/
-def is_bot (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop :=
-∀ a ∈ X, a ≠ b → P r a b
-
-/-- A social state `b` is *top* of a finite set of social states `X` with respect to
-  a ranking `p` if `b` is ranked strictly higher than every other `a ∈ X`. -/
-def is_top (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
-∀ a ∈ X, a ≠ b → P r b a
-
-/-- A social state `b` is *extremal* with respect to a finite set of social states `X` 
-  and a ranking `p` if `b` is either bottom or top of `X`. -/
-def is_extremal (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
-is_bot b r X ∨ is_top b r X
-
--- # Preliminary Lemmas
--- NOTE: eventually we should probably move most of these (and the above def'ns) to the basic file
+/-! ### Some basic definitions and lemmas 
+    NOTE: Eventually we should probably move most of these to the basic file -/
 
 lemma exists_second_distinct_mem (hX : 2 ≤ X.card) (a_in : a ∈ X) :
   ∃ b ∈ X, b ≠ a :=
@@ -72,6 +46,34 @@ end
 
 lemma nonempty_of_mem {s : finset σ} {a : σ} (ha : a ∈ s) : s.nonempty := 
 nonempty_of_ne_empty $ ne_empty_of_mem ha
+
+/- Alternate defintion of `same_order`. Can be interchanged with the original, as 
+the lemma below shows. -/
+def same_order' (r r' : σ → σ → Prop) (s₁ s₂ s₃ s₄ : σ) : Prop :=
+(P r s₂ s₁ ↔ P r' s₄ s₃) ∧ (P r s₁ s₂ ↔ P r' s₃ s₄)
+
+lemma P_iff_of_iff (h₁ : r a b ↔ r' a b) (h₂ : r b a ↔ r' b a) : 
+  (P r a b ↔ P r' a b) ∧ (P r b a ↔ P r' b a) :=
+begin
+  simp only [P],
+  rw [h₁, h₂],
+  simp only [iff_self, and_self],
+end
+
+/-- A social state `b` is *bottom* of a finite set of social states `X` with respect to 
+  a ranking `p` if `b` is ranked strictly lower than every other `a ∈ X`. -/
+def is_bot (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop :=
+∀ a ∈ X, a ≠ b → P r a b
+
+/-- A social state `b` is *top* of a finite set of social states `X` with respect to
+  a ranking `p` if `b` is ranked strictly higher than every other `a ∈ X`. -/
+def is_top (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
+∀ a ∈ X, a ≠ b → P r b a
+
+/-- A social state `b` is *extremal* with respect to a finite set of social states `X` 
+  and a ranking `p` if `b` is either bottom or top of `X`. -/
+def is_extremal (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
+is_bot b r X ∨ is_top b r X
 
 lemma is_top.not_bot (htop : is_top b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_bot b r X :=
 begin
@@ -107,22 +109,15 @@ or.inl hbot
 lemma is_top.is_extremal (hbot : is_top b r X) : is_extremal b r X := 
 or.inr hbot
 
-/- Next, we define the notion of a preference ordering. -/
-structure pref_order (α : Type*) := 
-(rel : α → α → Prop)
-(refl : reflexive rel)
-(total : total rel)
-(trans : transitive rel)
+/-! ### "Make" functions -/
 
-instance (α : Type*) : has_coe_to_fun (pref_order α) := ⟨_, λ r, r.rel⟩
-
-lemma pref_order_eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
+local attribute [instance] classical.prop_decidable
 
 /-- Given an arbitary preference order `r` and a social state `b`,
   `maketop r b` updates `r` so that `b` is now ranked strictly higher 
   than any other social state. 
   The definition also contains a proof that this new relation is a `pref_order σ`. --/
-def maketop [decidable_eq σ] (r : pref_order σ) (b : σ) : pref_order σ := 
+def maketop (r : pref_order σ) (b : σ) : pref_order σ := 
 begin
   use λ x y, if x = b then true else if y = b then false else r x y,
   { intro x,
@@ -143,7 +138,7 @@ end
   `makebot r b` updates `r` so that every other social state is now ranked 
   strictly higher than `b`. 
   The definition also contains a proof that this new relation is a `pref_order σ`. --/
-def makebot [decidable_eq σ] (r : pref_order σ) (b : σ) : pref_order σ := 
+def makebot (r : pref_order σ) (b : σ) : pref_order σ := 
 begin
   use λ x y, if y = b then true else if x = b then false else r x y,
   { intro x,
@@ -159,8 +154,6 @@ begin
     work_on_goal 6 { exact r.trans hxy hyz },
     all_goals { trivial } },
 end
-  
-local attribute [instance] classical.prop_decidable
 
 /-- Given an arbitary preference order `r` and two social states `a` and `b`, 
   `makebot r a b` updates `r` so that: 
@@ -189,10 +182,6 @@ begin
     { exact r.trans hxy hyz } },
 end 
 
-section make
-
-variable [decidable_eq σ]
-
 lemma maketop_noteq (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠ b) :
   (maketop r b a c ↔ r a c) ∧ (maketop r b c a ↔ r c a) := 
 begin
@@ -217,33 +206,35 @@ lemma makebot_noteq' (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠
   (P (makebot r b) a c ↔ P r a c) ∧ (P (makebot r b) c a ↔ P r c a) :=
 let h := makebot_noteq r ha hc in P_iff_of_iff h.1 h.2
 
-lemma makejustabove_noteq (R : pref_order σ) (a b c d : σ) (hc : c ≠ b) (hd : d ≠ b):
-  ((makejustabove R a b) c d ↔ R c d) ∧ ((makejustabove R a b) d c ↔ R d c) :=
+lemma makejustabove_noteq (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
+  ((makejustabove r a b) c d ↔ r c d) ∧ ((makejustabove r a b) d c ↔ r d c) :=
 by simp [makejustabove, ← pref_order_eq_coe, hc, hd]
 
-lemma makejustabove_noteq' (r : pref_order σ) (a b c d: σ) (ha : a ≠ b) (hc : c ≠ b) (hd : d ≠ b) :
+lemma makejustabove_noteq' (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
   (P (makejustabove r a b) c d ↔ P r c d) ∧ (P (makejustabove r a b) d c ↔ P r d c) :=
 by simp [makejustabove, P, ← pref_order_eq_coe, hc, hd]
 
+-- TODO: new name
 lemma is_top_of_maketop (b : σ) (r : pref_order σ) (X : finset σ) :
   is_top b (maketop r b) X :=
 by simp [maketop, is_top, P, ←pref_order_eq_coe]
 
+-- TODO: new name
 lemma is_bot_of_makebot (b : σ) (r : pref_order σ) (X : finset σ) :
   is_bot b (makebot r b) X :=
 by simp [is_bot, makebot, P, ←pref_order_eq_coe]
 
-/- # TODO: new name -/
-lemma lt_makejustabove {a b : σ} (r : pref_order σ) (h : a ≠ b):
+-- TODO: new name
+lemma lt_makejustabove {a b : σ} (r : pref_order σ) (ha : a ≠ b):
   P (makejustabove r a b) b a :=
-by simpa [P, makejustabove, ←pref_order_eq_coe, not_or_distrib, h] using r.refl a
+by simpa [P, makejustabove, ←pref_order_eq_coe, not_or_distrib, ha] using r.refl a
 
-/- # TODO NEW NAME -/
-lemma makejustabove_bla {a b c : σ} (r : pref_order σ) (h : c ≠ b) (hr : ¬r a c) :
+--TODO: new name
+lemma makejustabove_bla {a b c : σ} (r : pref_order σ) (hc : c ≠ b) (hr : ¬r a c) :
   P (makejustabove r a b) c b :=
-by simpa [P, makejustabove, ←pref_order_eq_coe, not_or_distrib, h]
+by simpa [P, makejustabove, ←pref_order_eq_coe, not_or_distrib, hc]
 
-end make
+/-! ### Properties -/
 
 def weak_pareto (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (R : ι → pref_order σ), (∀ i : ι, P (R i) x y) → P (f R) x y
@@ -266,7 +257,6 @@ def is_pivotal (f : (ι → pref_order σ) → pref_order σ)
 def has_pivot (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) (b : σ): Prop := 
 ∃ i, is_pivotal f X i b
 
-
 /-- An individual is a dictator over all social states in a given set *except* `b` 
   if they are a dictator over every pair of distinct alternatives not equal to `b`.  -/
 def is_dictator_except (f : (ι → pref_order σ) → pref_order σ) 
@@ -274,7 +264,7 @@ def is_dictator_except (f : (ι → pref_order σ) → pref_order σ)
 ∀ a c ∈ X, a ≠ b → c ≠ b → ∀ R : ι → pref_order σ, P (R i) c a → P (f R) c a 
 
 
--- # Further Lemmas
+/-! ### Auxiliary lemmas -/
 
 variables {R : ι → pref_order σ} {f : (ι → pref_order σ) → pref_order σ} 
 
@@ -300,7 +290,7 @@ begin
   sorry,
 end
 
-/--- The Proof Begins ---/
+/-! ### The Proof Begins -/
 
 lemma first_step {R : ι → pref_order σ}
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
@@ -403,7 +393,6 @@ begin
 end
 
 lemma second_step_aux [fintype ι] 
-  {f : (ι → pref_order σ) → pref_order σ} {X : finset σ}
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 2 < X.card) (b_in : b ∈ X) {D' : finset ι} :
   ∀ {R : ι → pref_order σ}, D' = {i ∈ univ | is_bot b (R i) X} → 
@@ -448,7 +437,6 @@ begin
 end
 
 lemma second_step [fintype ι]
-  {f : (ι → pref_order σ) → pref_order σ} {X : finset σ}
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) 
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
 has_pivot f X b := 
@@ -468,7 +456,6 @@ begin
   exact h₁,
 end
 
-
 lemma third_step (hind : ind_of_irr_alts f X) 
   (b_in : b ∈ X) {i : ι} (i_piv : is_pivotal f X i b) :
   is_dictator_except f X i b :=
@@ -476,7 +463,6 @@ begin
   intros a c a_in c_in a_neq_b c_neq_b Q hyp,
   obtain ⟨R, R', i_piv⟩ := i_piv,
   have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
-  classical,
   let Q' : ι → pref_order σ:= λ j, 
     if j = i 
       then makejustabove (Q j) a b
@@ -489,11 +475,11 @@ begin
   { intros j d d_neq_b e e_neq_b,
     by_cases hj : j = i,
     { simp only [Q', if_pos hj, 
-        makejustabove_noteq' (Q j) a b d e a_neq_b d_neq_b e_neq_b, 
+        makejustabove_noteq' (Q j) a d_neq_b e_neq_b, 
           and_self, iff_self], },
     { simp [Q', if_neg hj],
       by_cases hbot : is_bot b (R j) X,
-      { simp only [if_pos hbot, makebot_noteq' (Q j) d_neq_b e_neq_b, 
+      { simp [if_pos hbot, makebot_noteq' (Q j) d_neq_b e_neq_b, 
           iff_self, and_self], },
       { simp only [if_neg hbot, maketop_noteq' (Q j) d_neq_b e_neq_b, 
           iff_self, and_self], }, }, },
@@ -607,9 +593,8 @@ begin
   exact P_trans (f Q').trans h₂ h₁,
 end
 
-lemma fourth_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) 
-  (hX : 3 ≤ X.card) (h : ∀ b ∈ X, has_pivot f X b) : 
-is_dictatorship f X := 
+lemma fourth_step (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) (h : ∀ b ∈ X, has_pivot f X b) : 
+  is_dictatorship f X := 
 begin
   have X_pos : 0 < card X := by linarith,
   obtain ⟨b, b_in⟩ := (card_pos.1 X_pos).bex,
@@ -643,8 +628,6 @@ end
 
 /-- Arrow's Impossibility Theorem: Any social welfare function involving at least three social
   states that satisfies WP and IoIA is necessarily a dictatorship. --/
-theorem arrow [fintype ι]
-  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
-is_dictatorship f X := fourth_step hwp hind hX $ second_step hwp hind hX
-
-#lint
+theorem arrow [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) :
+  is_dictatorship f X := 
+fourth_step hind hX $ second_step hwp hind hX

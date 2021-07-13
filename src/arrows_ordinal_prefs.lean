@@ -159,9 +159,9 @@ end
   `makebot r a b` updates `r` so that: 
   (1) `b` is strictly higher than `a` and any other social state `y` where `r a y`
   (2) any other social state that is strictly higher than `a` is strictly higher than `b`.
-  Intuitively, we have moved `b` *just above* `a` in the ordering. 
+  Intuitively, we have moved `b` just above `a` in the ordering. 
   The definition also contains a proof that this new relation is a `pref_order σ`. --/
-def makejustabove (r : pref_order σ) (a b : σ) : pref_order σ := 
+def makeabove (r : pref_order σ) (a b : σ) : pref_order σ := 
 begin
   use λ x y, if x = b then if y = b then true else if r a y then true else false 
              else if y = b then if r a x then false else true else r x y,
@@ -206,13 +206,13 @@ lemma makebot_noteq' (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠
   (P (makebot r b) a c ↔ P r a c) ∧ (P (makebot r b) c a ↔ P r c a) :=
 let h := makebot_noteq r ha hc in P_iff_of_iff h.1 h.2
 
-lemma makejustabove_noteq (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
-  ((makejustabove r a b) c d ↔ r c d) ∧ ((makejustabove r a b) d c ↔ r d c) :=
-by simp [makejustabove, ← pref_order_eq_coe, hc, hd]
+lemma makeabove_noteq (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
+  ((makeabove r a b) c d ↔ r c d) ∧ ((makeabove r a b) d c ↔ r d c) :=
+by simp [makeabove, ← pref_order_eq_coe, hc, hd]
 
-lemma makejustabove_noteq' (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
-  (P (makejustabove r a b) c d ↔ P r c d) ∧ (P (makejustabove r a b) d c ↔ P r d c) :=
-by simp [makejustabove, P, ← pref_order_eq_coe, hc, hd]
+lemma makeabove_noteq' (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
+  (P (makeabove r a b) c d ↔ P r c d) ∧ (P (makeabove r a b) d c ↔ P r d c) :=
+by simp [makeabove, P, ← pref_order_eq_coe, hc, hd]
 
 lemma is_top_maketop (b : σ) (r : pref_order σ) (X : finset σ) :
   is_top b (maketop r b) X :=
@@ -222,13 +222,13 @@ lemma is_bot_makebot (b : σ) (r : pref_order σ) (X : finset σ) :
   is_bot b (makebot r b) X :=
 by simp [is_bot, makebot, P, ← pref_order_eq_coe]
 
-lemma makejustabove_above {a b : σ} (r : pref_order σ) (ha : a ≠ b):
-  P (makejustabove r a b) b a :=
-by simpa [P, makejustabove, ← pref_order_eq_coe, not_or_distrib, ha] using r.refl a
+lemma makeabove_above {a b : σ} (r : pref_order σ) (ha : a ≠ b):
+  P (makeabove r a b) b a :=
+by simpa [P, makeabove, ← pref_order_eq_coe, not_or_distrib, ha] using r.refl a
 
-lemma makejustabove_below {a b c : σ} {r : pref_order σ} (hc : c ≠ b) (hr : ¬r a c) :
-  P (makejustabove r a b) c b :=
-by simpa [P, makejustabove, ← pref_order_eq_coe, not_or_distrib, hc]
+lemma makeabove_below {a b c : σ} {r : pref_order σ} (hc : c ≠ b) (hr : ¬r a c) :
+  P (makeabove r a b) c b :=
+by simpa [P, makeabove, ← pref_order_eq_coe, not_or_distrib, hc]
 
 /-! ### Properties -/
 
@@ -295,7 +295,7 @@ begin
   classical,
   by_contra hnot,
   obtain ⟨a, c, a_in, c_in, hab, hcb, hac, hfa, hfb⟩ := exists_of_not_extremal hX b_in hnot,
-  let R' := λ j, makejustabove (R j) a c,
+  let R' := λ j, makeabove (R j) a c,
   have hfR'ab : f R' a b,
   { sorry, },
   sorry, 
@@ -444,7 +444,7 @@ begin
   have X_ne := nonempty_of_ne_empty (ne_empty_of_mem b_in),
   let Q' : ι → pref_order σ:= λ j, 
     if j = i 
-      then makejustabove (Q j) a b
+      then makeabove (Q j) a b
     else 
       if is_bot b (R j) X
         then makebot (Q j) b
@@ -454,7 +454,7 @@ begin
   { intros j d d_neq_b e e_neq_b,
     by_cases hj : j = i,
     { simp only [Q', if_pos hj, 
-        makejustabove_noteq' (Q j) a d_neq_b e_neq_b, 
+        makeabove_noteq' (Q j) a d_neq_b e_neq_b, 
           and_self, iff_self], },
     { simp [Q', if_neg hj],
       by_cases hbot : is_bot b (R j) X,
@@ -466,7 +466,7 @@ begin
   { refine (λ j, ⟨⟨λ hP, _, λ hQ', _⟩, ⟨λ hP, _, λ hQ', _⟩⟩ ); by_cases hj : j = i,
     { simp [Q', if_pos hj],
       rw ← hj at hyp,
-      exact makejustabove_below c_neq_b hyp.2, },  
+      exact makeabove_below c_neq_b hyp.2, },  
     { simp [Q', if_neg hj],
       have b_bot : is_bot b (R j) X,
       { unfold is_bot,
@@ -499,7 +499,7 @@ begin
       simp only at hQ',
       simp [Q', if_pos hj] at hQ',
       rw hj at hQ',
-      exact hQ'.2 (makejustabove_below c_neq_b hyp.2).1, },
+      exact hQ'.2 (makeabove_below c_neq_b hyp.2).1, },
     { by_contradiction hR,
       have b_bot : is_bot b (R j) X,
       { refine is_extremal.is_bot (i_piv.2.1 j) _,
@@ -513,7 +513,7 @@ begin
     { simp [Q'],
       rw if_pos hj,
       rw ← hj at hyp,
-      have := makejustabove_above (Q j),
+      have := makeabove_above (Q j),
       exact (this a_neq_b), },
     { simp [Q'],
       have not_bot : ¬ is_bot b (R j) X,
@@ -549,7 +549,7 @@ begin
       { exfalso,
         simp only at hQ',
         simp only [Q', dite_eq_ite, if_pos hj] at hQ',
-        exact hQ'.2 (makejustabove_above (Q j) a_neq_b).1, },
+        exact hQ'.2 (makeabove_above (Q j) a_neq_b).1, },
       { simp only at hQ', 
         simp only [Q', dite_eq_ite, if_neg hj] at hQ',
         have b_bot : (is_bot b (R j) X),

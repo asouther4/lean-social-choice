@@ -54,11 +54,7 @@ def same_order' (r r' : σ → σ → Prop) (s₁ s₂ s₃ s₄ : σ) : Prop :=
 
 lemma P_iff_of_iff (h₁ : r a b ↔ r' a b) (h₂ : r b a ↔ r' b a) : 
   (P r a b ↔ P r' a b) ∧ (P r b a ↔ P r' b a) :=
-begin
-  simp only [P],
-  rw [h₁, h₂],
-  simp only [iff_self, and_self],
-end
+by simp_rw [P, h₁, h₂, iff_self, and_self]
 
 /-- A social state `b` is *bottom* of a finite set of social states `X` with respect to 
   a ranking `p` if `b` is ranked strictly lower than every other `a ∈ X`. -/

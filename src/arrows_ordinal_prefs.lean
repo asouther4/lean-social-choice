@@ -193,85 +193,36 @@ section make
 
 variable [decidable_eq σ]
 
-lemma maketop_noteq (r : pref_order σ) (a b c : σ) (ha : a ≠ b) (hc : c ≠ b) :
+lemma maketop_noteq (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠ b) :
   ((maketop r b) a c ↔ r a c) ∧ ((maketop r b) c a ↔ r c a) := 
 begin
-  split,
-  { simp [maketop],
-    split,
-    { intro h,
-      cases h,
-      simp at *,
-      exfalso,
-      exact ha h,
-      exact h.2, },
-    { intro h,
-      right,
-      exact ⟨hc, h⟩, }, },
-  { split,
-    { intro h,
-      simp [maketop] at h,
-      cases h,
-      simp at *,
-      exfalso,
-      exact hc h,
-      exact h.2, },
-    { intro h,
-      simp [maketop],
-      right,
-      exact ⟨ha, h⟩, }, },
+  simp only [maketop, if_false_left_eq_and, if_true_left_eq_or],
+  refine ⟨⟨_, λ h, or.inr ⟨hc, h⟩⟩, ⟨_, λ h, or.inr ⟨ha, h⟩⟩⟩; rintro (rfl | ⟨-, h⟩),
+  exacts [absurd rfl ha, h, absurd rfl hc, h],
 end
 
-lemma maketop_noteq' (r : pref_order σ) (a b c : σ) (ha : a ≠ b) (hc : c ≠ b) :
+lemma maketop_noteq' (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠ b) :
   (P (maketop r b) a c ↔ P r a c) ∧ (P (maketop r b) c a ↔ P r c a) :=
-begin
-  have := maketop_noteq r a b c ha hc,
-  exact P_iff_of_iff this.1 this.2,
-end
+let h := maketop_noteq r ha hc in P_iff_of_iff h.1 h.2
 
-lemma makebot_noteq (r : pref_order σ) (a b c : σ) (ha : a ≠ b) (hc : c ≠ b) :
+lemma makebot_noteq (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠ b) :
   ((makebot r b) a c ↔ r a c) ∧ ((makebot r b) c a ↔ r c a) := 
 begin
-  split,
-  { simp [makebot],
-    split,
-    { intro h,
-      cases h,
-      simp at *,
-      exfalso,
-      exact hc h,
-      exact h.2, },
-    { intro h,
-      right,
-      exact ⟨ha, h⟩, }, },
-  { split,
-    { intro h,
-      simp [makebot] at h,
-      cases h,
-      simp at *,
-      exfalso,
-      exact ha h,
-      exact h.2, },
-    { intro h,
-      simp [makebot],
-      right,
-      exact ⟨hc, h⟩, }, },
+  simp only [makebot, if_false_left_eq_and, if_true_left_eq_or],
+  refine ⟨⟨_, λ h, or.inr ⟨ha, h⟩⟩, ⟨_, λ h, or.inr ⟨hc, h⟩⟩⟩; rintro (rfl | ⟨-, h⟩),
+  exacts [absurd rfl hc, h, absurd rfl ha, h],
 end
 
-lemma makebot_noteq' (r : pref_order σ) (a b c : σ) (ha : a ≠ b) (hc : c ≠ b) :
+lemma makebot_noteq' (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠ b) :
   (P (makebot r b) a c ↔ P r a c) ∧ (P (makebot r b) c a ↔ P r c a) :=
-begin
-  have := makebot_noteq r a b c ha hc,
-  exact P_iff_of_iff this.1 this.2,
-end
+let h := makebot_noteq r ha hc in P_iff_of_iff h.1 h.2
 
-lemma makejustabove_noteq (R : pref_order σ) (a b c d: σ) (hc : c ≠ b) (hd : d ≠ b):
-((makejustabove R a b) c d ↔ R c d) ∧ ((makejustabove R a b) d c ↔ R d c) :=
+lemma makejustabove_noteq (R : pref_order σ) (a b c d : σ) (hc : c ≠ b) (hd : d ≠ b):
+  ((makejustabove R a b) c d ↔ R c d) ∧ ((makejustabove R a b) d c ↔ R d c) :=
 by simp [makejustabove, ← pref_order_eq_coe, hc, hd]
 
-
-lemma makejustabove_noteq' (r : pref_order σ) (a b c d: σ) (ha : a ≠ b) (hc : c ≠ b) (hd : d ≠ b):
-(P (makejustabove r a b) c d ↔ P r c d) ∧ (P (makejustabove r a b) d c ↔ P r d c) :=
+lemma makejustabove_noteq' (r : pref_order σ) (a b c d: σ) (ha : a ≠ b) (hc : c ≠ b) (hd : d ≠ b) :
+  (P (makejustabove r a b) c d ↔ P r c d) ∧ (P (makejustabove r a b) d c ↔ P r d c) :=
 by simp [makejustabove, P, ← pref_order_eq_coe, hc, hd]
 
 lemma is_top_of_maketop (b : σ) (r : pref_order σ) (X : finset σ) :
@@ -558,9 +509,9 @@ begin
           and_self, iff_self], },
     { simp [Q', if_neg hj],
       by_cases hbot : is_bot b (R j) X,
-      { simp only [if_pos hbot, makebot_noteq' (Q j) d b e d_neq_b e_neq_b, 
+      { simp only [if_pos hbot, makebot_noteq' (Q j) d_neq_b e_neq_b, 
           iff_self, and_self], },
-      { simp only [if_neg hbot, maketop_noteq' (Q j) d b e d_neq_b e_neq_b, 
+      { simp only [if_neg hbot, maketop_noteq' (Q j) d_neq_b e_neq_b, 
           iff_self, and_self], }, }, },
   have hQ'bc : ∀ j, (P (R j) c b ↔ P (Q' j) c b) ∧ (P (R j) b c ↔ P (Q' j) b c),
   { refine (λ j, ⟨⟨λ hP, _, λ hQ', _⟩, ⟨λ hP, _, λ hQ', _⟩⟩ ); by_cases hj : j = i,

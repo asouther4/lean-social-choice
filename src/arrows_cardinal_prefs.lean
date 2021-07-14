@@ -356,7 +356,7 @@ lemma third_step (hind : ind_of_irr_alts f X)
 begin
   intros a c ha hc hab hcb Q hyp,
   obtain ⟨P, P', hpiv⟩ := hpiv,
-  have hX := nonempty_of_ne_empty (ne_empty_of_mem hb),
+  have hX := nonempty_of_mem hb,
   classical,
   let Q' := λ j, 
     if j = i 

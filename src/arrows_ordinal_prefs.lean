@@ -437,7 +437,7 @@ begin
     suffices : ∀ d ≠ b, ∀ e ≠ b, same_order' (Q j) (Q' j) e d e d, from this c hcb a hab,
     intros d hdb e heb, 
     simp only [Q', same_order'],
-    split_ifs with hj hbot; simp [makeabove_noteq', makebot_noteq', maketop_noteq', hdb, heb] },
+    split_ifs; simp [makeabove_noteq', makebot_noteq', maketop_noteq', hdb, heb] },
   rw (hind Q Q' a c a_in c_in hQ').1,
   refine P_trans (f Q').trans ((hind R Q' b c b_in c_in _).1.1 (i_piv.2.2.2.2.2.1 c c_in hcb)) 
     ((hind R' Q' a b a_in b_in _).1.1 (i_piv.2.2.2.2.2.2 a a_in hab)); intro j; split; split; 
@@ -496,37 +496,34 @@ begin
     exact Q'top j hj hbot },
 end
 
-lemma fourth_step (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) (h : ∀ b ∈ X, has_pivot f X b) : 
+lemma fourth_step (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) (hpiv : ∀ b ∈ X, has_pivot f X b) : 
   is_dictatorship f X := 
 begin
-  have X_pos : 0 < card X := by linarith,
-  obtain ⟨b, b_in⟩ := (card_pos.1 X_pos).bex,
-  obtain ⟨i, i_piv⟩ := h b b_in,
+  obtain ⟨b, hb⟩ := (card_pos.1 (zero_lt_two.trans hX)).bex,
+  obtain ⟨i, i_piv⟩ := hpiv b hb,
   have h : ∀ a ∈ X, a ≠ b → ∀ Rᵢ : ι → pref_order σ, 
-          (P (Rᵢ i) a b → P (f Rᵢ) a b) ∧ (P (Rᵢ i) b a → P (f Rᵢ) b a),
+          (P (Rᵢ i) a b → P (f Rᵢ) a b) ∧ (P (Rᵢ i) b a → P (f Rᵢ) b a), -- is there perhaps a better way to state this? -Ben
   { intros a a_in hab Rᵢ,
-    obtain ⟨c, c_in, hca, hcb⟩ := exists_third_distinct_mem hX a_in b_in hab,
+    obtain ⟨c, hc, hca, hcb⟩ := exists_third_distinct_mem hX a_in hb hab,
     obtain ⟨hac, hbc⟩ := ⟨hca.symm, hcb.symm⟩,
-    obtain ⟨j, j_piv⟩ := h c c_in,
-    have hdict := third_step hind c_in j_piv, 
+    obtain ⟨j, j_piv⟩ := hpiv c hc,
+    obtain hdict := third_step hind hc j_piv, 
     obtain rfl : j = i,
     { by_contra hji,
       obtain ⟨R, R', hso, hextr, -, -, -, hbot, htop⟩ := i_piv,
-      have h₁ := hdict b a b_in a_in hbc hac R',
-      have h₂ := (hextr j).is_top,
-      rw ← (hso j hji a b a_in b_in) at h₁,
-      refine (htop a a_in hab).2 (h₁ _).1,
+      refine (htop a a_in hab).2 (hdict b a hb a_in hbc hac R' _).1,
+      rw ← hso j hji a b a_in hb,
       by_contra hnot,
-      simp only [is_top, is_bot, and_imp, exists_imp_distrib, not_forall] at h₂,
-      exact (hdict a b a_in b_in hac hbc R (h₂ a a_in hab hnot a a_in hab)).2 
-        (hbot a a_in hab).1, }, 
-    split; apply hdict; assumption, },
+      refine (hdict a b a_in hb hac hbc R ((hextr j).is_top _ a a_in hab)).2 (hbot a a_in hab).1,
+      simp only [is_bot, not_forall], 
+      exact ⟨a, a_in, hab, hnot⟩ }, 
+    split; apply hdict; assumption },
   refine ⟨i, λ x y hx hy Rᵢ hRᵢ, _⟩,
   rcases @eq_or_ne _ b x with rfl | hbx; rcases @eq_or_ne _ b y with rfl | hby,
   { exact (false_of_P_self hRᵢ).elim, },
   { exact (h y hy hby.symm Rᵢ).2 hRᵢ, },
   { exact (h x hx hbx.symm Rᵢ).1 hRᵢ, },
-  { exact third_step hind b_in i_piv y x hy hx hby.symm hbx.symm Rᵢ hRᵢ, },
+  { exact third_step hind hb i_piv y x hy hx hby.symm hbx.symm Rᵢ hRᵢ, },
 end 
 
 /-- Arrow's Impossibility Theorem: Any social welfare function involving at least three social

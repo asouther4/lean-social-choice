@@ -361,7 +361,8 @@ begin
 end
 -/
 
-def second_step_rel (b : σ) : pref_order σ :=
+/-- We define relation `r₂`, a `pref_order` we will use in `second_step`. -/
+def r₂ (b : σ) : pref_order σ :=
 begin
   use λ x y, if y = b then true else if x = b then false else true,
   { intro x, split_ifs; trivial },
@@ -414,14 +415,14 @@ end
 lemma second_step [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) 
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
-has_pivot f X b := 
+  has_pivot f X b := 
 begin
   classical,
-  have hbot : is_bot b (second_step_rel b) X,
-  { simp only [is_bot, second_step_rel, P, ←pref_order.eq_coe, 
+  have hbot : is_bot b (r₂ b) X,
+  { simp only [is_bot, r₂, P, ←pref_order.eq_coe, 
       true_and, if_false_left_eq_and, imp_self, and_true, implies_true_iff, 
         true_or, eq_self_iff_true, not_true, or_false, if_true_left_eq_or], },
-  let R : ι → pref_order σ := λ j, second_step_rel b,
+  let R : ι → pref_order σ := λ j, r₂ b,
   have h₁ := second_step_aux,
   have h₂ := is_bot_of_forall_is_bot f b X b_in,
   specialize h₁ hwp hind hX b_in rfl (λ i, hbot.is_extremal),

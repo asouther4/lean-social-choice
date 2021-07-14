@@ -2,7 +2,7 @@ import basic
 
 open relation vector finset
 
-/-! ### Definition of a preference ordering. -/
+/-! ### Definition of a preference ordering -/
 
 structure pref_order (α : Type*) := 
 (rel : α → α → Prop)
@@ -235,14 +235,13 @@ def weak_pareto (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) :
 ∀ (x y ∈ X) (R : ι → pref_order σ), (∀ i : ι, P (R i) x y) → P (f R) x y
 
 def ind_of_irr_alts (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) : Prop :=
-∀ (R R' : ι → pref_order σ) (x y ∈ X), (∀ i : ι, same_order' (R i) (R' i) x y x y) → 
-  same_order' (f R) (f R') x y x y
+∀ (R R' : ι → pref_order σ) (x y ∈ X), 
+  (∀ i : ι, same_order' (R i) (R' i) x y x y) → same_order' (f R) (f R') x y x y
 
 def is_dictatorship (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) : Prop :=
 ∃ i : ι, ∀ (x y ∈ X) (R : ι → pref_order σ), P (R i) x y → P (f R) x y
 
-def is_pivotal (f : (ι → pref_order σ) → pref_order σ) 
-  (X : finset σ) (i : ι) (b : σ) : Prop := 
+def is_pivotal (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) (i : ι) (b : σ) : Prop :=
 ∃ (R R' : ι → pref_order σ),
   (∀ j : ι, j ≠ i → ∀ x y ∈ X, R j = R' j) ∧ 
     (∀ i : ι, is_extremal b (R i) X) ∧ (∀ i : ι, is_extremal b (R' i) X) ∧
@@ -380,38 +379,36 @@ begin
     (λ R h hextr hbot, absurd (is_top_of_forall_is_top b_in hwp (λ j, (hextr j).is_top _))
                               (hbot.not_top (exists_second_distinct_mem hX.le b_in))) 
     (λ i D hi IH R h_insert hextr hbot, _),
-  { simpa using eq_empty_iff_forall_not_mem.mp h.symm j, },
+  { simpa using eq_empty_iff_forall_not_mem.mp h.symm j },
   { have hX' := nonempty_of_mem b_in,
     let R' := λ j, (ite (j = i) (maketop (R j) b) (R j)),
     have hextr' : ∀ j, is_extremal b (R' j) X,
-    { intro j,
-      by_cases hji : j = i, -- use split_ifs
-      { refine or.inr (λ a a_in hab, _),
-        simp only [R', if_pos hji, (is_top_maketop b (R j) X) a a_in hab], },
-      { simp only [R', if_neg hji, hextr j], }, },
+    { intro j, simp only [R'], 
+      split_ifs,
+      { exact is_top.is_extremal (λ a ha hab, is_top_maketop b (R j) X a ha hab) },
+      { exact hextr j } },
     by_cases hR' : is_top b (f R') X,
     { refine ⟨i, R, R', λ j hj x y _ _, _, hextr, hextr', _, _, hbot, hR'⟩,
-      { simp only [R', if_neg hj], },
-      { have : i ∈ {j ∈ univ | is_bot b (R j) X} := 
-        by rw ← h_insert; exact mem_insert_self i D,
-        simpa, },
-      { simp only [R', is_top_maketop, if_pos], }, },
+      { simp only [R', if_neg hj] },
+      { have : i ∈ {j ∈ univ | is_bot b (R j) X}, { rw ← h_insert, exact mem_insert_self i D },
+        simpa },
+      { simp only [R', is_top_maketop, if_pos] } },
     { refine IH _ hextr' ((first_step hwp hind hX b_in hextr').is_bot hR'),
       ext j,
       simp only [true_and, sep_def, mem_filter, mem_univ, R'],
       split; intro hj,
       { suffices : j ∈ insert i D,
-        { have hji : j ≠ i := by rintro rfl; exact hi hj,
+        { have hji : j ≠ i, { rintro rfl, exact hi hj },
           rw h_insert at this,
-          simpa [hji], },
-        exact mem_insert_of_mem hj, },
+          simpa [hji] },
+        exact mem_insert_of_mem hj },
       { have hji : j ≠ i,
         { rintro rfl,
           obtain ⟨a, a_in, hab⟩ := exists_second_distinct_mem hX.le b_in,
           simp only [if_pos] at hj,
-          exact (is_top_maketop b (R j) X a a_in hab).2 (hj a a_in hab).1, },
+          exact (is_top_maketop b (R j) X a a_in hab).2 (hj a a_in hab).1 },
         rw [← erase_insert hi, h_insert],
-        simpa [hji] using hj, }, } },
+        simpa [hji] using hj } } },
 end
 
 lemma second_step [fintype ι]

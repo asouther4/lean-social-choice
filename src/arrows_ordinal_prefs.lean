@@ -416,21 +416,9 @@ lemma second_step [fintype ι]
   (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) 
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
   has_pivot f X b := 
-begin
-  classical,
-  have hbot : is_bot b (r₂ b) X,
-  { simp only [is_bot, r₂, P, ←pref_order.eq_coe, 
-      true_and, if_false_left_eq_and, imp_self, and_true, implies_true_iff, 
-        true_or, eq_self_iff_true, not_true, or_false, if_true_left_eq_or], },
-  let R : ι → pref_order σ := λ j, r₂ b,
-  have h₁ := second_step_aux,
-  have h₂ := is_bot_of_forall_is_bot f b X b_in,
-  specialize h₁ hwp hind hX b_in rfl (λ i, hbot.is_extremal),
-  assumption, 
-  specialize h₂ hwp (λ i, hbot),
-  specialize h₁ h₂,
-  exact h₁,
-end
+have hbot : is_bot b (r₂ b) X, by simp [is_bot, r₂, P, ←pref_order.eq_coe],
+second_step_aux hwp hind hX b_in rfl (λ i, hbot.is_extremal) $
+  is_bot_of_forall_is_bot f b X b_in hwp $ λ i, hbot
 
 lemma third_step (hind : ind_of_irr_alts f X) 
   (b_in : b ∈ X) {i : ι} (i_piv : is_pivotal f X i b) :

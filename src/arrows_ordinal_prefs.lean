@@ -2,62 +2,10 @@ import basic
 
 open relation vector finset
 
-/-! ### Definition of a preference ordering -/
-
-structure pref_order (α : Type*) := 
-(rel : α → α → Prop)
-(refl : reflexive rel)
-(total : total rel)
-(trans : transitive rel)
-
-instance (α : Type*) : has_coe_to_fun (pref_order α) := ⟨_, λ r, r.rel⟩
-
-lemma pref_order.eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
-
-lemma pref_order.reverse {α : Type*} {r : pref_order α} {a b : α} (h : ¬r a b) : r b a :=
-(r.total a b).resolve_left h
-
 -- We think of social states as type `σ` and inidividuals as type `ι`
 variables {σ ι : Type} {x y x' y' a b : σ} {r r' : σ → σ → Prop} {X : finset σ}
 
-/-! ### Some basic definitions and lemmas 
-    NOTE: Eventually we should probably move most of these to the basic file -/
-
-lemma exists_second_distinct_mem (hX : 2 ≤ X.card) (a_in : a ∈ X) :
-  ∃ b ∈ X, b ≠ a :=
-begin
-  classical,
-  have hpos : 0 < (X.erase a).card,
-  { rw card_erase_of_mem a_in,
-    exact zero_lt_one.trans_le (nat.pred_le_pred hX) },
-  cases card_pos.mp hpos with b hb,
-  cases mem_erase.mp hb with hne H,
-  exact ⟨b, H, hne⟩,
-end
-
-lemma exists_third_distinct_mem (hX : 2 < X.card) (a_in : a ∈ X) (b_in : b ∈ X) (h : a ≠ b) : 
-  ∃ c ∈ X, c ≠ a ∧ c ≠ b :=
-begin
-  classical,
-  have hpos : 0 < ((X.erase b).erase a).card,
-  { simpa only [card_erase_of_mem, mem_erase_of_ne_of_mem h a_in, b_in]
-      using nat.pred_le_pred (nat.pred_le_pred hX) }, 
-  cases card_pos.mp hpos with c hc,
-  simp_rw mem_erase at hc,
-  exact ⟨c, hc.2.2, hc.1, hc.2.1⟩,
-end
-
-lemma nonempty_of_mem {s : finset σ} {a : σ} (ha : a ∈ s) : s.nonempty := 
-nonempty_of_ne_empty $ ne_empty_of_mem ha
-
-/- Alternate defintion of `same_order`. Can be interchanged with the original, as 
-the lemma below shows. -/
-def same_order' (r r' : σ → σ → Prop) (s₁ s₂ s₃ s₄ : σ) : Prop :=
-(P r s₂ s₁ ↔ P r' s₄ s₃) ∧ (P r s₁ s₂ ↔ P r' s₃ s₄)
-
-lemma P_iff_of_iff (h₁ : r a b ↔ r' a b) (h₂ : r b a ↔ r' b a) : 
-  (P r a b ↔ P r' a b) ∧ (P r b a ↔ P r' b a) :=
-by simp_rw [P, h₁, h₂, iff_self, and_self]
+/-! ### Some basic definitions and lemmas -/
 
 /-- A social state `b` is *bottom* of a finite set of social states `X` with respect to 
   a ranking `p` if `b` is ranked strictly lower than every other `a ∈ X`. -/
@@ -496,7 +444,8 @@ begin
     exact Q'top j hj hbot },
 end
 
-lemma fourth_step (hind : ind_of_irr_alts f X) (hX : 3 ≤ X.card) (hpiv : ∀ b ∈ X, has_pivot f X b) : 
+lemma fourth_step (hind : ind_of_irr_alts f X) 
+  (hX : 3 ≤ X.card) (hpiv : ∀ b ∈ X, has_pivot f X b) : 
   is_dictatorship f X := 
 begin
   obtain ⟨b, hb⟩ := (card_pos.1 (zero_lt_two.trans hX)).bex,

@@ -233,8 +233,7 @@ end
 
 /-! ### The Proof Begins -/
 
-lemma first_step {R : ι → pref_order σ}
-  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
+lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b_in : b ∈ X) (hextr : ∀ i, is_extremal b (R i) X) :
   is_extremal b (f R) X :=
 begin
@@ -317,8 +316,7 @@ begin
   { intros x y z, simp only, split_ifs; simp only [forall_true_left, forall_false_left] },
 end
 
-lemma second_step_aux [fintype ι]
-  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
+lemma second_step_aux [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 2 < X.card) (b_in : b ∈ X) {D' : finset ι} :
   ∀ {R : ι → pref_order σ}, D' = {i ∈ univ | is_bot b (R i) X} → 
     (∀ i, is_extremal b (R i) X) → is_bot b (f R) X → has_pivot f X b := 
@@ -328,12 +326,11 @@ begin
                               (hbot.not_top (exists_second_distinct_mem hX.le b_in))) 
     (λ i D hi IH R h_insert hextr hbot, _),
   { simpa using eq_empty_iff_forall_not_mem.mp h.symm j },
-  { have hX' := nonempty_of_mem b_in,
-    let R' := λ j, (ite (j = i) (maketop (R j) b) (R j)),
+  { let R' := λ j, (ite (j = i) (maketop (R j) b) (R j)),
     have hextr' : ∀ j, is_extremal b (R' j) X,
     { intro j, simp only [R'], 
       split_ifs,
-      { exact is_top.is_extremal (λ a ha hab, is_top_maketop b (R j) X a ha hab) },
+      { exact (is_top_maketop b (R j) X).is_extremal },
       { exact hextr j } },
     by_cases hR' : is_top b (f R') X,
     { refine ⟨i, R, R', λ j hj x y _ _, _, hextr, hextr', _, _, hbot, hR'⟩,
@@ -359,8 +356,7 @@ begin
         simpa [hji] using hj } } },
 end
 
-lemma second_step [fintype ι]
-  (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X) 
+lemma second_step [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
   has_pivot f X b := 
 have hbot : is_bot b (r₂ b) X, by simp [is_bot, r₂, P, ←pref_order.eq_coe],
@@ -388,8 +384,8 @@ begin
     split_ifs; simp [makeabove_noteq', makebot_noteq', maketop_noteq', hdb, heb] },
   rw (hind Q Q' a c a_in c_in hQ').1,
   refine P_trans (f Q').trans ((hind R Q' b c b_in c_in _).1.1 (i_piv.2.2.2.2.2.1 c c_in hcb)) 
-    ((hind R' Q' a b a_in b_in _).1.1 (i_piv.2.2.2.2.2.2 a a_in hab)); intro j; split; split; 
-      intro H; rcases @eq_or_ne _ j i with rfl | hj,
+    ((hind R' Q' a b a_in b_in _).1.1 (i_piv.2.2.2.2.2.2 a a_in hab)); 
+      intro j; split; split; intro H; rcases @eq_or_ne _ j i with rfl | hj,
   { convert makeabove_below hcb h },  
   { convert (is_bot_makebot b (Q j) X) c c_in hcb,
     apply Q'bot j hj,
@@ -417,7 +413,7 @@ begin
     simp only [is_top, not_forall],
     exact ⟨c, c_in, hcb, H'⟩ }, 
   { convert makeabove_above (Q j) hab },
-  { convert (is_top_maketop b (Q j) X) a a_in hab,
+  { convert is_top_maketop b (Q j) X a a_in hab,
     apply Q'top j hj,
     rw i_piv.1 j hj a b a_in b_in,
     simp only [is_bot, not_forall],

@@ -106,9 +106,17 @@ def same_order (R R' : σ → σ → Prop) (x y x' y' : σ) : Prop :=
 ((R x y ↔ R' x' y') ∧ (R y x ↔ R' y' x')) ∧ (P R x y ↔ P R' x' y') ∧ (P R y x ↔ P R' y' x')
 
 /- Alternate defintion of `same_order`. Can be interchanged with the original, as 
-the lemma below shows. -/
+the lemma below shows. -/ -- I'm not certain this is true. I'll explain next time we meet. -Ben
 def same_order' (r r' : σ → σ → Prop) (s₁ s₂ s₃ s₄ : σ) : Prop :=
 (P r s₂ s₁ ↔ P r' s₄ s₃) ∧ (P r s₁ s₂ ↔ P r' s₃ s₄)
+
+lemma same_order_iff_same_order' : same_order R R' x y x' y' ↔ same_order' R R' y x y' x' :=
+begin
+  dsimp only [same_order, same_order'],
+  refine ⟨λ h, h.2, λ h, _⟩,
+  --have H := P_iff_of_iff,
+  sorry,
+end
 
 lemma same_order_of_P_P' (hR : P R x y) (hR' : P R' x y) : same_order R R' x y x y := 
 ⟨⟨⟨λ h, hR'.1, λ h, hR.1⟩, ⟨hR.2.elim, hR'.2.elim⟩⟩, 

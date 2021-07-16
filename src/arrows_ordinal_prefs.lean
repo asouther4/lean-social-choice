@@ -179,16 +179,32 @@ by simpa [P, makeabove, ← pref_order.eq_coe, not_or_distrib, hc]
 
 /-! ### Properties -/
 
+/-- A social welfare function satisfies the Weak Pareto criterion if, for any two social states 
+  `x` and `y`, every individual ranking `x` higher than `y` implies that society ranks `x` higher 
+  than `y`. -/
 def weak_pareto (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (R : ι → pref_order σ), (∀ i : ι, P (R i) x y) → P (f R) x y
 
+
+/-- Suppose that for any two social states `x` and `y`, every individual's ordering of `x` and `y`
+  remains unchanged between two orderings `P₁` and `P₂`. We say that a social welfare function is 
+  *independent of irrelevant alternatives* if society's ordering of `x` and `y` also remains 
+  unchanged between `P₁` and `P₂`. -/
 def ind_of_irr_alts (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) : Prop :=
 ∀ (R R' : ι → pref_order σ) (x y ∈ X), 
   (∀ i : ι, same_order' (R i) (R' i) x y x y) → same_order' (f R) (f R') x y x y
 
+/-- A social welfare function is a *dictatorship* if there exists an individual who possesses the power
+   to determine society's order of any social states. -/
 def is_dictatorship (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) : Prop :=
 ∃ i : ι, ∀ (x y ∈ X) (R : ι → pref_order σ), P (R i) x y → P (f R) x y
 
+/-- An individual `i` is *pivotal* with respect to a social welfare function and a social state `b`
+  if there exist preference orderings `R` and `R'` such that: 
+  (1) all individuals except for `i` rank all social states exactly the same in both orderings
+  (2) all individuals place `b` in an extremal position in both rankings
+  (3) `i` ranks `b` bottom of their rankings in `R`, but top of their rankings in `R'`
+  (4) society ranks `b` bottom of its rankings in `R`, but top of its rankings in `R'` -/
 def is_pivotal (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) (i : ι) (b : σ) : Prop :=
 ∃ (R R' : ι → pref_order σ),
   (∀ j : ι, j ≠ i → ∀ x y ∈ X, R j = R' j) ∧ 
@@ -196,6 +212,8 @@ def is_pivotal (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) (i
       (is_bot b (R i) X) ∧ (is_top b (R' i) X) ∧ 
         (is_bot b (f R) X) ∧ (is_top b (f R') X)
 
+/-- A social welfare function has a *pivot* with respect to a social state `b` if there exists an
+  individual who is pivotal with respect to that function and `b`. -/
 def has_pivot (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) (b : σ): Prop := 
 ∃ i, is_pivotal f X i b
 
@@ -241,8 +259,8 @@ begin
   by_contra hnot,
   obtain ⟨a, c, a_in, c_in, hab, hcb, hac, hfa, hfb⟩ := exists_of_not_extremal hX b_in hnot,
   let R' := λ j, makeabove (R j) a c,
-  have hfR'ab : f R' a b, { sorry },
-  sorry, 
+  sorry,
+
 end
 
 /- NOTE: the proof of `first_step` below is now deprecated, and it'll take a good bit of work to fix. 

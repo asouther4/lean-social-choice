@@ -1,5 +1,27 @@
 import basic
 
+/- 
+In this file, we formalize a proof of Arrow's Impossibility Theorem. 
+We closely follow the first proof in this 2005 paper by John Geankopolos: 
+* https://link.springer.com/article/10.1007/s00199-004-0556-7
+
+
+Arrow's Impossibility Theorem has been formalized in other languages before. 
+
+Freek Wiedijk wrote a formalization in Mizar: 
+* https://link.springer.com/article/10.1007/s12046-009-0005-1
+
+Tobias Nipkow wrote a formalization in Isabelle/HOL: 
+* https://link.springer.com/article/10.1007/s10817-009-9147-4
+
+
+At times, our formalization is a close translation of Nipkow's proof in HOL. 
+In particular, our definition of functions `maketop`, `makebot`, and `makeabove` are 
+inspired by his strategy for manipulating preferences. However, Nipkow defines preference orders 
+in a completely different way from our `basic` file. 
+-/
+
+
 open relation vector finset
 
 -- We think of social states as type `σ` and inidividuals as type `ι`
@@ -264,6 +286,9 @@ end
 
 /-! ### The Proof Begins -/
 
+/- Geankopolos (2005) calls this step the *Extremal Lemma*. If every individual
+places alternative `b` in an extremal position (at the very top or bottom of her rankings),
+then society must also place alternative `b` in an extremal position. -/
 lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b_in : b ∈ X) (hextr : ∀ i, is_extremal b (R i) X) :
   is_extremal b (f R) X :=
@@ -320,6 +345,7 @@ begin
   { intros x y z, simp only, split_ifs; simp only [forall_true_left, forall_false_left] },
 end
 
+/- This is an auxiliary lemma used in the `second_step`. -/
 lemma second_step_aux [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 2 < X.card) (b_in : b ∈ X) {D' : finset ι} :
   ∀ {R : ι → pref_order σ}, D' = {i ∈ univ | is_bot b (R i) X} → 
@@ -360,6 +386,8 @@ begin
         simpa [hji] using hj } } },
 end
 
+/- In his second step, Geankopolos shows that for any social state `b`, 
+there exists an individual who is pivotal over that social state.  -/
 lemma second_step [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
   has_pivot f X b := 
@@ -367,6 +395,8 @@ have hbot : is_bot b (r₂ b) X, by simp [is_bot, r₂, P, ←pref_order.eq_coe]
 second_step_aux hwp hind hX b_in rfl (λ i, hbot.is_extremal) $
   is_bot_of_forall_is_bot f b X b_in hwp $ λ i, hbot
 
+/- Step 3 states that if an individual `is_pivotal` over some alternative `b`, they 
+are also a dictator over every pair of alternatives not equal to `b`. -/
 lemma third_step (hind : ind_of_irr_alts f X) 
   (b_in : b ∈ X) {i : ι} (i_piv : is_pivotal f X i b) :
   is_dictator_except f X i b :=
@@ -444,6 +474,9 @@ begin
     exact Q'top j hj hbot },
 end
 
+
+/- Step 4 states that if an individual is a dictator over every pair of social states 
+except for `b`, they are also a dictator over all pairs (including `b`). -/
 lemma fourth_step (hind : ind_of_irr_alts f X) 
   (hX : 3 ≤ X.card) (hpiv : ∀ b ∈ X, has_pivot f X b) : 
   is_dictatorship f X := 

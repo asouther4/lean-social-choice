@@ -259,9 +259,27 @@ begin
   by_contra hnot,
   obtain ⟨a, c, a_in, c_in, hab, hcb, hac, hfa, hfb⟩ := exists_of_not_extremal hX b_in hnot,
   let R' := λ j, makeabove (R j) a c,
-  sorry,
-
-end
+  refine (hwp c a c_in a_in R' _).2 ((f R').trans 
+    (((same_order_iff_same_order' (f R).total (f R').total).2 
+    (hind R R' a b a_in b_in _)).1.1.1 hfa) 
+    (((same_order_iff_same_order' (f R).total (f R').total).2
+    (hind R R' b c b_in c_in _)).1.1.1 hfb)),
+  { sorry, },
+  { intro j,
+    simp [same_order', R'],
+    refine ⟨⟨λ hyp, _ , λ hyp, _⟩,⟨λ hyp, _ , λ hyp, _⟩⟩,
+    { sorry, },
+    { sorry, },
+    { sorry, },
+    { sorry, }, },
+  { intro j,
+    simp [same_order', R'],
+    refine ⟨⟨λ hyp, _ , λ hyp, _⟩,⟨λ hyp, _ , λ hyp, _⟩⟩,
+    { sorry, },
+    { sorry, },
+    { sorry, },
+    { sorry, }, },
+  end
 
 /- NOTE: the proof of `first_step` below is now deprecated, and it'll take a good bit of work to fix. 
   But I am keeping it here now for future reference. -- Andrew 

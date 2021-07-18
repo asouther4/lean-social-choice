@@ -10,9 +10,9 @@ jobs:
       - name: checkout project
         uses: actions/checkout@v2
       - name: upgrade Lean and dependencies
-        uses: leanprover-contrib/lean-upgrade-action@main
+        uses: leanprover-contrib/lean-upgrade-action@master
         with:
           repo: ${{ github.repository }}
       access-token: ${{ secrets.GITHUB_TOKEN }}
       - name: update version branches
-        uses: leanprover-contrib/update-versions-action@main
+        uses: leanprover-contrib/update-versions-action@master

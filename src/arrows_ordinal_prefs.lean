@@ -173,6 +173,12 @@ lemma makeabove_above {a b : σ} (r : pref_order σ) (ha : a ≠ b):
   P (makeabove r a b) b a :=
 by simpa [P, makeabove, ← pref_order.eq_coe, not_or_distrib, ha] using r.refl a
 
+lemma makeabove_above' {a b c : σ} {r : pref_order σ} (hc : c ≠ b) (hr : r a c):
+  P (makeabove r a b) b c := by
+  simpa only [P, makeabove, ←pref_order.eq_coe, hc, if_false_left_eq_and, 
+    and_true, if_true, false_or, not_not, eq_self_iff_true,
+      if_false, and_self, if_false_right_eq_and] using hr
+
 lemma makeabove_below {a b c : σ} {r : pref_order σ} (hc : c ≠ b) (hr : ¬r a c) :
   P (makeabove r a b) c b :=
 by simpa [P, makeabove, ← pref_order.eq_coe, not_or_distrib, hc]
@@ -264,21 +270,38 @@ begin
     (hind R R' a b a_in b_in _)).1.1.1 hfa) 
     (((same_order_iff_same_order' (f R).total (f R').total).2
     (hind R R' b c b_in c_in _)).1.1.1 hfb)),
-  { sorry, },
+  { intro j,
+    exact makeabove_above (R j) hac, },
+  { intro j,
+    simp only [same_order', makeabove_noteq' (R j) a hcb.symm hac,
+      iff_self, and_self], },
   { intro j,
     simp [same_order', R'],
     refine ⟨⟨λ hyp, _ , λ hyp, _⟩,⟨λ hyp, _ , λ hyp, _⟩⟩,
-    { sorry, },
-    { sorry, },
-    { sorry, },
-    { sorry, }, },
-  { intro j,
-    simp [same_order', R'],
-    refine ⟨⟨λ hyp, _ , λ hyp, _⟩,⟨λ hyp, _ , λ hyp, _⟩⟩,
-    { sorry, },
-    { sorry, },
-    { sorry, },
-    { sorry, }, },
+    { have b_top : is_top b (R j) X,
+      { apply (hextr j).is_top,
+        simp only [is_bot, exists_prop, ne.def, not_forall],
+        exact ⟨c, c_in, hcb, nP_of_reverseP hyp⟩, },
+        exact makeabove_below hcb.symm (b_top a a_in hab).2, },
+    { by_contradiction hR,
+      have b_bot : is_bot b (R j) X,
+      { apply (hextr j).is_bot,
+        simp only [is_top, exists_prop, ne.def, not_forall],
+        exact ⟨c, c_in, hcb, hR⟩, },
+      apply hyp.2,
+      exact (makeabove_above' hcb.symm (b_bot a a_in hab).1).1, },
+    { have b_bot : is_bot b (R j) X,
+      { apply (hextr j).is_bot,
+        simp only [is_top, exists_prop, ne.def, not_forall],
+        exact ⟨c, c_in, hcb, nP_of_reverseP hyp⟩, },
+      exact makeabove_above' hcb.symm (b_bot a a_in hab).1, },
+    { by_contradiction hR,
+      have b_top : is_top b (R j) X,
+      { apply (hextr j).is_top,
+        simp only [is_bot, exists_prop, ne.def, not_forall],
+        exact ⟨c, c_in, hcb, hR⟩, },
+      apply hyp.2,
+      exact (makeabove_below hcb.symm (b_top a a_in hab).2).1, }, },
   end
 
 /- NOTE: the proof of `first_step` below is now deprecated, and it'll take a good bit of work to fix. 

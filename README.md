@@ -21,7 +21,7 @@ For more information on Lean and its community, see [here](https://leanprover-co
 
 ## Library Structure
 
-This library is in early development. Right now, we have two main files: 
+This project is in early development. Right now, we have two main files: 
 
 - `basic` is a collection of simple definitions and theorems modelled off of Chapter 1 from [Collective Choice and Social Welfare](https://www.hup.harvard.edu/catalog.php?isbn=9780674919211) by Amartya Sen. Notably, we incldue Sen's Theorem on the necessary and sufficient condition for the existence of a choice function. 
 - `arrows_theorem` contains a proof of [Arrow's Impossibility Theorem](https://en.wikipedia.org/wiki/Arrow%27s_impossibility_theorem). 

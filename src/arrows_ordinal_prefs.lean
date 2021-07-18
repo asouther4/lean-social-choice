@@ -271,7 +271,7 @@ begin
     (((same_order_iff_same_order' (f R).total (f R').total).2
     (hind R R' b c b_in c_in _)).1.1.1 hfb)),
   { intro j,
-    exact makeabove_above (R j) hac, },
+    exact makeabove_above (R j) hac,},
   { intro j,
     simp only [same_order', makeabove_noteq' (R j) a hcb.symm hac,
       iff_self, and_self], },
@@ -435,15 +435,15 @@ begin
   have Q'top : ∀ j ≠ i, ¬is_bot b (R j) X → Q' j = maketop (Q j) b :=
     λ j hj hbot, by simp only [Q', if_neg hj, if_neg hbot],
   have Q'above : Q' i = makeabove (Q i) a b := by simp [Q'],
-  have hQ' : ∀ j, same_order' (Q j) (Q' j) a c a c,
+  have hQ' : ∀ j, same_order' (Q j) (Q' j) c a c a,
   { intro j,
-    suffices : ∀ d ≠ b, ∀ e ≠ b, same_order' (Q j) (Q' j) e d e d, from this c hcb a hab,
+    suffices : ∀ d ≠ b, ∀ e ≠ b, same_order' (Q j) (Q' j) e d e d, from this a hab c hcb,
     intros d hdb e heb, 
     simp only [Q', same_order'],
     split_ifs; simp [makeabove_noteq', makebot_noteq', maketop_noteq', hdb, heb] },
-  rw (hind Q Q' a c a_in c_in hQ').1,
-  refine P_trans (f Q').trans ((hind R Q' b c b_in c_in _).1.1 (i_piv.2.2.2.2.2.1 c c_in hcb)) 
-    ((hind R' Q' a b a_in b_in _).1.1 (i_piv.2.2.2.2.2.2 a a_in hab)); 
+  rw (hind Q Q' c a c_in a_in hQ').1,
+  refine P_trans (f Q').trans ((hind R Q' c b c_in b_in _).1.1 (i_piv.2.2.2.2.2.1 c c_in hcb)) 
+    ((hind R' Q' b a b_in a_in _).1.1 (i_piv.2.2.2.2.2.2 a a_in hab)); 
       intro j; split; split; intro H; rcases @eq_or_ne _ j i with rfl | hj,
   { convert makeabove_below hcb h },  
   { convert (is_bot_makebot b (Q j) X) c c_in hcb,

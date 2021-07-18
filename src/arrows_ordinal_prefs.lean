@@ -252,7 +252,14 @@ theorem is_bot_of_forall_is_bot (f : (ι → pref_order σ) → pref_order σ)
 lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extremal b (f R) X):
   ∃ a c ∈ X, a ≠ b ∧ c ≠ b ∧ a ≠ c ∧ f R a b ∧ f R b c := 
 begin
-  sorry,
+  unfold is_extremal is_bot is_top at h, push_neg at h,
+  obtain ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := h,
+  obtain hac | rfl := @ne_or_eq _ a c, 
+  { exact ⟨a, c, ha, hc, hab, hcb, hac, R_of_nP_total (f R).total hPa, R_of_nP_total (f R).total hPc⟩ },
+  obtain ⟨d, hd, hda, hdb⟩ := exists_third_distinct_mem hX ha hb hab,
+  cases (f R).total d b,
+  { refine ⟨d, a, hd, hc, hdb, hcb, hda, h, R_of_nP_total (f R).total hPc⟩, },
+  { refine ⟨a, d, ha, hd, hab, hdb, hda.symm, R_of_nP_total (f R).total hPa, h⟩, },
 end
 
 /-! ### The Proof Begins -/

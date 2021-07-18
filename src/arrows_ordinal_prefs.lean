@@ -311,68 +311,6 @@ begin
       exact (makeabove_below hcb.symm (b_top a a_in hab).2).1, }, },
   end
 
-/- NOTE: the proof of `first_step` below is now deprecated, and it'll take a good bit of work to fix. 
-  But I am keeping it here now for future reference. -- Andrew 
-
-lemma first_step (hf : is_arrovian f X N) (hX : 3 ≤ card X) (b : σ) (b_in : b ∈ X) (R : (ι → σ → σ → Prop))
-  (hyp : ∀ i ∈ N, is_extremal (R i) X b) :
-  is_extremal (f R) X b :=
-begin
-  by_contradiction hnot,
-  unfold is_extremal at hnot,
-  push_neg at hnot,
-  rcases ⟨hnot b_in⟩ with ⟨⟨c, c_in, c_ne, hc⟩, ⟨a, a_in, a_ne, ha⟩⟩,
-  replace ha : (f R) a b := R_of_nP_total (hf.2.2.2 R).2.1 ha,
-  replace hc : (f R) b c := R_of_nP_total (hf.2.2.2 R).2.1 hc,
-  have hR₂ : ∃ (R₂ : ι → σ → σ → Prop), ∀ i ∈ N, 
-              P (R₂ i) c a ∧ same_order (R i) (R₂ i) b a b a ∧ same_order (R i) (R₂ i) b c b c,
-  { let I₁ := {i ∈ N | P (R i) c b ∧ P (R i) a b},
-    let I₂ := {i ∈ N | P (R i) b c ∧ P (R i) b a},
-    let I := [I₁, I₂],
-    have I_length : I.length = 2 := eq.refl I.length,
-    let T₁ := [b, a, c], let T₂ := [a, c, b],
-    have T₁_length : T₁.length = 3 := eq.refl T₁.length, have T₂_length : T₂.length = 3 := eq.refl T₂.length,
-    let T₁_vec : vector σ 3 := ⟨T₁, T₁_length⟩, let T₂_vec : vector σ 3 := ⟨T₂, T₂_length⟩,
-    let T := [T₁_vec, T₂_vec],
-    have T_length : T.length = 2 := eq.refl T.length,
-    obtain ⟨R₂, hR₂⟩ := hf.1 3 2 ⟨I, I_length⟩ ⟨T, T_length⟩,
-    use R₂,
-    intros i i_in,
-    by_cases h : ∀ t ∈ X, t ≠ b → P (R i) b t, 
-    { --have i_and : P (R i) b c ∧ P (R i) b a := ⟨h c c_in c_ne, h a a_in a_ne⟩,
-      obtain ⟨h1, h2⟩ := ⟨h a a_in a_ne, h c c_in c_ne⟩,
-      have i_in' : i ∈ I₂ := by simp [I₂, i_in, h1, h2],
-      --have hI₂ : I₂ = nth ⟨I, I_length⟩ 1 := rfl,
-      --rw hI₂ at i_in',
-      --have R₂a : (nth ⟨T, T_length⟩ 1).nth 0 = a := rfl,
-      --have R₂b : (nth ⟨T, T_length⟩ 1).nth 2 = b := rfl,
-      --have R₂c : (nth ⟨T, T_length⟩ 1).nth 1 = c := rfl,
-      have R₂ba := hR₂ i (1 : fin 2) 2 0 i_in' dec_trivial,
-      have R₂bc := hR₂ i (1 : fin 2) 2 1 i_in' dec_trivial,
-      have R₂ca := hR₂ i (1 : fin 2) 1 0 i_in' dec_trivial,
-      exact ⟨R₂ca, same_order_of_P_P' h1 R₂ba, same_order_of_P_P' h2 R₂bc⟩ },
-    { specialize hyp i i_in, 
-      rw [is_extremal, or_iff_not_imp_right] at hyp,
-      replace h := hyp.2 h,
-      have i_and : P (R i) c b ∧ P (R i) a b := ⟨h c c_in c_ne, h a a_in a_ne⟩,
-      have i_in' : i ∈ I₁ := by tidy,
-      have hI₁ : I₁ = nth ⟨I, I_length⟩ 0 := rfl, rw hI₁ at i_in',
-      have R₂a : ((nth ⟨T, T_length⟩ 0).nth 1) = a := rfl,
-      have R₂b : ((nth ⟨T, T_length⟩ 0).nth 0) = b := rfl,
-      have R₂c : ((nth ⟨T, T_length⟩ 0).nth 2) = c := rfl,
-      have R₂ab := hR₂ i (0 : fin 2) 1 0 i_in' dec_trivial, rw [R₂a, R₂b] at R₂ab,
-      have R₂cb := hR₂ i (0 : fin 2) 2 0 i_in' dec_trivial, rw [R₂c, R₂b] at R₂cb,
-      have R₂ca := hR₂ i (0 : fin 2) 2 1 i_in' dec_trivial, rw [R₂c, R₂a] at R₂ca,
-      exact ⟨R₂ca, same_order_of_reverseP_P' (h a a_in a_ne) R₂ab, same_order_of_reverseP_P' (h c c_in c_ne) R₂cb⟩ } },
-  cases hR₂ with R₂ hR₂,
-  have h_pareto := hf.2.1 c a c_in a_in R₂ (λ i i_in, (hR₂ i i_in).1),
-  have same_order_ba := hf.2.2.1 R R₂ b a b_in a_in (λ i i_in, (hR₂ i i_in).2.1), 
-  have same_order_bc := hf.2.2.1 R R₂ b c b_in c_in (λ i i_in, (hR₂ i i_in).2.2), 
-  have h_trans := (hf.2.2.2 (R₂)).2.2 (same_order_ba.1.2.1 ha) (same_order_bc.1.1.1 hc),
-  exact h_pareto.2 h_trans,
-end
--/
-
 /-- We define relation `r₂`, a `pref_order` we will use in `second_step`. -/
 def r₂ (b : σ) : pref_order σ :=
 begin

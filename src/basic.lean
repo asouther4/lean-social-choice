@@ -108,14 +108,39 @@ def same_order (R R' : σ → σ → Prop) (x y x' y' : σ) : Prop :=
 /- Alternate defintion of `same_order`. Can be interchanged with the original, as 
 the lemma below shows. -/ -- I'm not certain this is true. I'll explain next time we meet. -Ben
 def same_order' (r r' : σ → σ → Prop) (s₁ s₂ s₃ s₄ : σ) : Prop :=
-(P r s₂ s₁ ↔ P r' s₄ s₃) ∧ (P r s₁ s₂ ↔ P r' s₃ s₄)
+(P r s₁ s₂ ↔ P r' s₃ s₄) ∧ (P r s₂ s₁ ↔ P r' s₄ s₃)
 
-lemma same_order_iff_same_order' : same_order R R' x y x' y' ↔ same_order' R R' y x y' x' :=
+lemma same_order_iff_same_order' (hR : total R) (hR' : total R') : 
+same_order R R' x y x y ↔ same_order' R R' x y x y :=
 begin
   dsimp only [same_order, same_order'],
-  refine ⟨λ h, h.2, λ h, _⟩,
-  --have H := P_iff_of_iff,
-  sorry,
+  refine ⟨ (λ h, h.2), (λ h, ⟨_, h⟩)⟩,
+  refine ⟨⟨λ hyp, _ , λ hyp, _⟩,⟨λ hyp, _ , λ hyp, _⟩⟩;
+  cases h with h₁ h₂,
+  { by_cases hyx : R y x,
+    { rw [← not_iff_not] at *,
+      simp [P] at *,
+      cases hR' x y with hR' hR', {exact hR'},
+      exact h₂.1 (λ h, hyp) hR', },
+    { exact (h₁.1 ⟨hyp, hyx⟩).1, }, },
+  { by_cases hyx : R' y x,
+    { rw [← not_iff_not] at *,
+      simp [P] at *,
+      cases hR x y with hR hR, {exact hR},
+      exact h₂.2 (λ h, hyp) hR, },
+    { exact (h₁.2 ⟨hyp, hyx⟩).1, }, },
+  { by_cases hxy : R x y,
+    { rw [← not_iff_not] at *,
+      simp [P] at *,
+      cases hR' y x with hR' hR', {exact hR'},  
+      exact h₁.1 (λ h, hyp) hR', },
+    { exact (h₂.1 ⟨hyp, hxy⟩).1, },},
+  { by_cases hxy : R' x y,
+    { rw [← not_iff_not] at *,
+      simp [P] at *,
+      cases hR y x with hR hR, {exact hR},
+      exact h₁.2 (λ h, hyp) hR, },
+    { exact (h₂.2 ⟨hyp, hxy⟩).1, }, },
 end
 
 lemma same_order_of_P_P' (hR : P R x y) (hR' : P R' x y) : same_order R R' x y x y := 
@@ -125,6 +150,12 @@ lemma same_order_of_P_P' (hR : P R x y) (hR' : P R' x y) : same_order R R' x y x
 lemma same_order_of_reverseP_P' (hR : P R y x) (hR' : P R' y x) : same_order R R' x y x y :=
 ⟨⟨⟨hR.2.elim, hR'.2.elim⟩, ⟨λ h, hR'.1, λ h, hR.1⟩⟩, 
   ⟨⟨(nP_of_reverseP hR).elim, (nP_of_reverseP hR').elim⟩, ⟨λ h, hR', λ h, hR⟩⟩⟩
+
+lemma same_order'_iff_reverse (r r' : σ → σ → Prop) (x y : σ):
+same_order' r r' x y x y ↔ same_order' r r' y x y x := 
+  by simp only [same_order', and.comm, iff_self]
+
+example (p q : Prop) : p ∧ q ↔ q ∧ p := and.comm
 
 def is_maximal_element (x : σ) (S : finset σ) (R : σ → σ → Prop) : Prop :=
 ∀ y ∈ S, ¬P R y x

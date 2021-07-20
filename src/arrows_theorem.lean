@@ -1,6 +1,7 @@
 import basic
 
 /- 
+
 In this file, we formalize a proof of Arrow's Impossibility Theorem. 
 We closely follow the first proof in this 2005 paper by John Geankopolos: 
 * https://link.springer.com/article/10.1007/s00199-004-0556-7

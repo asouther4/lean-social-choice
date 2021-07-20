@@ -47,7 +47,7 @@ is_bot b r X ∨ is_top b r X
 
 lemma is_top.not_bot (htop : is_top b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_bot b r X :=
 begin
-  simp only [is_bot, not_forall, not_lt, exists_prop],
+  simp only [is_bot, not_forall],
   rcases h with ⟨a, a_in, hab⟩,
   exact ⟨a, a_in, hab, nP_of_reverseP (htop a a_in hab)⟩,
 end
@@ -57,7 +57,7 @@ htop.not_bot $ exists_second_distinct_mem hX hb
 
 lemma is_bot.not_top (hbot : is_bot b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_top b r X :=
 begin
-  simp only [is_top, not_forall, not_lt, exists_prop],
+  simp only [is_top, not_forall],
   rcases h with ⟨a, a_in, hab⟩,
   exact ⟨a, a_in, hab, nP_of_reverseP (hbot a a_in hab)⟩,
 end
@@ -177,7 +177,7 @@ lemma makebot_noteq' (r : pref_order σ) {a b c : σ} (ha : a ≠ b) (hc : c ≠
 let h := makebot_noteq r ha hc in P_iff_of_iff h.1 h.2
 
 lemma makeabove_noteq (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
-  ((makeabove r a b) c d ↔ r c d) ∧ ((makeabove r a b) d c ↔ r d c) :=
+  (makeabove r a b c d ↔ r c d) ∧ (makeabove r a b d c ↔ r d c) :=
 by simp [makeabove, ← pref_order.eq_coe, hc, hd]
 
 lemma makeabove_noteq' (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) (hd : d ≠ b) :
@@ -196,11 +196,9 @@ lemma makeabove_above {a b : σ} (r : pref_order σ) (ha : a ≠ b):
   P (makeabove r a b) b a :=
 by simpa [P, makeabove, ← pref_order.eq_coe, not_or_distrib, ha] using r.refl a
 
-lemma makeabove_above' {a b c : σ} {r : pref_order σ} (hc : c ≠ b) (hr : r a c):
-  P (makeabove r a b) b c := by
-  simpa only [P, makeabove, ←pref_order.eq_coe, hc, if_false_left_eq_and, 
-    and_true, if_true, false_or, not_not, eq_self_iff_true,
-      if_false, and_self, if_false_right_eq_and] using hr
+lemma makeabove_above' {a b c : σ} {r : pref_order σ} (hc : c ≠ b) (hr : r a c) :
+  P (makeabove r a b) b c :=
+by simpa [P, makeabove, ← pref_order.eq_coe, hc]
 
 lemma makeabove_below {a b c : σ} {r : pref_order σ} (hc : c ≠ b) (hr : ¬r a c) :
   P (makeabove r a b) c b :=
@@ -213,7 +211,6 @@ by simpa [P, makeabove, ← pref_order.eq_coe, not_or_distrib, hc]
   than `y`. -/
 def weak_pareto (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) : Prop := 
 ∀ (x y ∈ X) (R : ι → pref_order σ), (∀ i : ι, P (R i) x y) → P (f R) x y
-
 
 /-- Suppose that for any two social states `x` and `y`, every individual's ordering of `x` and `y`
   remains unchanged between two orderings `P₁` and `P₂`. We say that a social welfare function is 
@@ -265,9 +262,7 @@ theorem is_top_of_forall_is_top (b_in : b ∈ X) (hwp : weak_pareto f X)
 
 /-- If every individual ranks a social state `b` at the bottom of its rankings, then society must 
   also rank `b` at the bottom of its rankings. -/
-theorem is_bot_of_forall_is_bot (f : (ι → pref_order σ) → pref_order σ)
-  (b : σ) (X: finset σ)
-  (b_in : b ∈ X) (hwp : weak_pareto f X) 
+theorem is_bot_of_forall_is_bot (b_in : b ∈ X) (hwp : weak_pareto f X) 
   (hbot : ∀ i, is_bot b (R i) X) :
   is_bot b (f R) X :=
 λ a a_in hab, hwp a b a_in b_in R $ λ i, hbot i a a_in hab
@@ -277,12 +272,12 @@ lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extre
 begin
   unfold is_extremal is_bot is_top at h, push_neg at h,
   obtain ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := h,
-  obtain hac | rfl := @ne_or_eq _ a c, 
-  { exact ⟨a, c, ha, hc, hab, hcb, hac, R_of_nP_total (f R).total hPa, R_of_nP_total (f R).total hPc⟩ },
+  obtain ⟨hf, hfa, hfc⟩ := ⟨(f R).total, R_of_nP_total hf hPa, R_of_nP_total hf hPc⟩,
+  obtain hac | rfl := @ne_or_eq _ a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hfa, hfc⟩ },
   obtain ⟨d, hd, hda, hdb⟩ := exists_third_distinct_mem hX ha hb hab,
-  cases (f R).total d b,
-  { refine ⟨d, a, hd, hc, hdb, hcb, hda, h, R_of_nP_total (f R).total hPc⟩, },
-  { refine ⟨a, d, ha, hd, hab, hdb, hda.symm, R_of_nP_total (f R).total hPa, h⟩, },
+  cases hf d b,
+  { exact ⟨d, a, hd, hc, hdb, hcb, hda, h, hfc⟩ },
+  { exact ⟨a, d, ha, hd, hab, hdb, hda.symm, hfa, h⟩ },
 end
 
 /-! ### The Proof Begins -/
@@ -291,51 +286,34 @@ end
 places alternative `b` in an extremal position (at the very top or bottom of her rankings),
 then society must also place alternative `b` in an extremal position. -/
 lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
-  (hX : 3 ≤ X.card) (b_in : b ∈ X) (hextr : ∀ i, is_extremal b (R i) X) :
+  (hX : 3 ≤ X.card) (hb : b ∈ X) (hextr : ∀ i, is_extremal b (R i) X) :
   is_extremal b (f R) X :=
 begin
-  classical,
   by_contra hnot,
-  obtain ⟨a, c, a_in, c_in, hab, hcb, hac, hfa, hfb⟩ := exists_of_not_extremal hX b_in hnot,
-  let R' := λ j, makeabove (R j) a c,
-  refine (hwp c a c_in a_in R' _).2 ((f R').trans 
-    (((same_order_iff_same_order' (f R).total (f R').total).2 
-    (hind R R' a b a_in b_in _)).1.1.1 hfa) 
-    (((same_order_iff_same_order' (f R).total (f R').total).2
-    (hind R R' b c b_in c_in _)).1.1.1 hfb)),
-  { intro j,
-    exact makeabove_above (R j) hac,},
-  { intro j,
-    simp only [same_order', makeabove_noteq' (R j) a hcb.symm hac,
-      iff_self, and_self], },
-  { intro j,
-    simp [same_order', R'],
-    refine ⟨⟨λ hyp, _ , λ hyp, _⟩,⟨λ hyp, _ , λ hyp, _⟩⟩,
-    { have b_top : is_top b (R j) X,
-      { apply (hextr j).is_top,
-        simp only [is_bot, exists_prop, ne.def, not_forall],
-        exact ⟨c, c_in, hcb, nP_of_reverseP hyp⟩, },
-        exact makeabove_below hcb.symm (b_top a a_in hab).2, },
-    { by_contradiction hR,
-      have b_bot : is_bot b (R j) X,
-      { apply (hextr j).is_bot,
-        simp only [is_top, exists_prop, ne.def, not_forall],
-        exact ⟨c, c_in, hcb, hR⟩, },
-      apply hyp.2,
-      exact (makeabove_above' hcb.symm (b_bot a a_in hab).1).1, },
-    { have b_bot : is_bot b (R j) X,
-      { apply (hextr j).is_bot,
-        simp only [is_top, exists_prop, ne.def, not_forall],
-        exact ⟨c, c_in, hcb, nP_of_reverseP hyp⟩, },
-      exact makeabove_above' hcb.symm (b_bot a a_in hab).1, },
-    { by_contradiction hR,
-      have b_top : is_top b (R j) X,
-      { apply (hextr j).is_top,
-        simp only [is_bot, exists_prop, ne.def, not_forall],
-        exact ⟨c, c_in, hcb, hR⟩, },
-      apply hyp.2,
-      exact (makeabove_below hcb.symm (b_top a a_in hab).2).1, }, },
-  end
+  obtain ⟨a, c, ha, hc, hab, hcb, hac, hfa, hfb⟩ := exists_of_not_extremal hX hb hnot,
+  have H1 := λ {j} h, makeabove_below hcb.symm ((hextr j).is_top h a ha hab).2,
+  have H2 := λ {j} h, makeabove_above' hcb.symm ((hextr j).is_bot h a ha hab).1,
+  refine (hwp c a hc ha (λ j, makeabove (R j) a c) (λ j, makeabove_above (R j) hac)).2 
+    ((f _).trans (((same_order_iff_same_order' (f R).total (f _).total).2 -- wouldn't it be better just to do everything using `same_order'`? -Ben
+      (hind R _ a b ha hb (λ j, _))).1.1.1 hfa)
+        (((same_order_iff_same_order' (f R).total (f _).total).2
+          (hind R _ b c hb hc (λ j, ⟨⟨λ h, _ , λ h, _⟩, ⟨λ h, _ , λ h, _⟩⟩))).1.1.1 hfb)),
+  { simp only [same_order', makeabove_noteq' (R j) a hcb.symm hac, iff_self, and_self] },
+  { apply H1,
+    simp only [is_bot, not_forall],
+    exact ⟨c, hc, hcb, nP_of_reverseP h⟩ },
+  { by_contra hR,
+    refine h.2 (H2 _).1,
+    simp only [is_top, not_forall],
+    exact ⟨c, hc, hcb, hR⟩ },
+  { apply H2,
+    simp only [is_top, not_forall],
+    exact ⟨c, hc, hcb, nP_of_reverseP h⟩ },
+  { by_contra hR,
+    refine h.2 (H1 _).1,
+    simp only [is_bot, not_forall],
+    exact ⟨c, hc, hcb, hR⟩ },
+end
 
 /-- We define relation `r₂`, a `pref_order` we will use in `second_step`. -/
 def r₂ (b : σ) : pref_order σ :=
@@ -394,7 +372,7 @@ lemma second_step [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f
   has_pivot f X b := 
 have hbot : is_bot b (r₂ b) X, by simp [is_bot, r₂, P, ←pref_order.eq_coe],
 second_step_aux hwp hind hX b_in rfl (λ i, hbot.is_extremal) $
-  is_bot_of_forall_is_bot f b X b_in hwp $ λ i, hbot
+  is_bot_of_forall_is_bot b_in hwp $ λ i, hbot
 
 /- Step 3 states that if an individual `is_pivotal` over some alternative `b`, they 
 are also a dictator over every pair of alternatives not equal to `b`. -/
@@ -503,10 +481,10 @@ begin
     split; apply hdict; assumption },
   refine ⟨i, λ x y hx hy Rᵢ hRᵢ, _⟩,
   rcases @eq_or_ne _ b x with rfl | hbx; rcases @eq_or_ne _ b y with rfl | hby,
-  { exact (false_of_P_self hRᵢ).elim, },
-  { exact (h y hy hby.symm Rᵢ).2 hRᵢ, },
-  { exact (h x hx hbx.symm Rᵢ).1 hRᵢ, },
-  { exact third_step hind hb i_piv y x hy hx hby.symm hbx.symm Rᵢ hRᵢ, },
+  { exact (false_of_P_self hRᵢ).elim },
+  { exact (h y hy hby.symm Rᵢ).2 hRᵢ },
+  { exact (h x hx hbx.symm Rᵢ).1 hRᵢ },
+  { exact third_step hind hb i_piv y x hy hx hby.symm hbx.symm Rᵢ hRᵢ },
 end 
 
 /-- Arrow's Impossibility Theorem: Any social welfare function involving at least three social

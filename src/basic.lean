@@ -1,11 +1,12 @@
 import data.set.finite
-import tactic
+
+section
 
 /-! ### General lemmas about finsets; don't involve social choice theory -/
 
-namespace finset
-
 variables {α : Type*} {s : finset α} {a b : α}
+
+namespace finset
 
 lemma exists_second_distinct_mem (hs : 2 ≤ s.card) (ha : a ∈ s) :
   ∃ b ∈ s, b ≠ a :=
@@ -35,6 +36,16 @@ lemma nonempty_of_mem (ha : a ∈ s) : s.nonempty :=
 nonempty_of_ne_empty $ ne_empty_of_mem ha
 
 end finset
+
+namespace relation
+
+lemma forall_exists_trans_gen (R : α → α → Prop) (hR : ∀ a ∈ s, ∃ b ∈ s, R b a) :
+  ∀ a ∈ s, ∃ b ∈ s, trans_gen R b a :=
+λ a ha, let ⟨b, hb, h⟩ := hR a ha in ⟨b, hb, trans_gen.single h⟩
+
+end relation
+
+end 
 
 open relation finset
 
@@ -106,41 +117,31 @@ def same_order (R R' : σ → σ → Prop) (x y x' y' : σ) : Prop :=
 ((R x y ↔ R' x' y') ∧ (R y x ↔ R' y' x')) ∧ (P R x y ↔ P R' x' y') ∧ (P R y x ↔ P R' y' x')
 
 /- Alternate defintion of `same_order`. Can be interchanged with the original, as 
-the lemma below shows. -/ -- I'm not certain this is true. I'll explain next time we meet. -Ben
+`P_iff_of_iff` shows. -/ -- I'm not certain this is true. I'll explain next time we meet. -Ben
 def same_order' (r r' : σ → σ → Prop) (s₁ s₂ s₃ s₄ : σ) : Prop :=
 (P r s₁ s₂ ↔ P r' s₃ s₄) ∧ (P r s₂ s₁ ↔ P r' s₄ s₃)
 
 lemma same_order_iff_same_order' (hR : total R) (hR' : total R') : 
-same_order R R' x y x y ↔ same_order' R R' x y x y :=
+  same_order R R' x y x y ↔ same_order' R R' x y x y :=
 begin
-  dsimp only [same_order, same_order'],
-  refine ⟨ (λ h, h.2), (λ h, ⟨_, h⟩)⟩,
-  refine ⟨⟨λ hyp, _ , λ hyp, _⟩,⟨λ hyp, _ , λ hyp, _⟩⟩;
-  cases h with h₁ h₂,
+  refine ⟨λ h, h.2, λ h, ⟨⟨⟨λ hxy, _ , λ hxy, _⟩, ⟨λ hyx, _, λ hyx, _⟩⟩, h⟩⟩;
+    obtain ⟨h₁, h₂⟩ := ⟨h.1, h.2⟩; erw [← not_iff_not, not_and, not_not, not_and, not_not] at h₁ h₂,
   { by_cases hyx : R y x,
-    { rw [← not_iff_not] at *,
-      simp [P] at *,
-      cases hR' x y with hR' hR', {exact hR'},
-      exact h₂.1 (λ h, hyp) hR', },
-    { exact (h₁.1 ⟨hyp, hyx⟩).1, }, },
+    { cases hR' x y with hR' hR', { exact hR' },
+      exact h₂.mp (imp_intro hxy) hR' },
+    { exact (h.1.mp ⟨hxy, hyx⟩).1 } },
   { by_cases hyx : R' y x,
-    { rw [← not_iff_not] at *,
-      simp [P] at *,
-      cases hR x y with hR hR, {exact hR},
-      exact h₂.2 (λ h, hyp) hR, },
-    { exact (h₁.2 ⟨hyp, hyx⟩).1, }, },
+    { cases hR x y with hR hR, { exact hR },
+      exact h₂.mpr (imp_intro hxy) hR },
+    { exact (h.1.mpr ⟨hxy, hyx⟩).1 } },
   { by_cases hxy : R x y,
-    { rw [← not_iff_not] at *,
-      simp [P] at *,
-      cases hR' y x with hR' hR', {exact hR'},  
-      exact h₁.1 (λ h, hyp) hR', },
-    { exact (h₂.1 ⟨hyp, hxy⟩).1, },},
+    { cases hR' y x with hR' hR', { exact hR' },  
+      exact h₁.mp (imp_intro hyx) hR' },
+    { exact (h.2.mp ⟨hyx, hxy⟩).1 } },
   { by_cases hxy : R' x y,
-    { rw [← not_iff_not] at *,
-      simp [P] at *,
-      cases hR y x with hR hR, {exact hR},
-      exact h₁.2 (λ h, hyp) hR, },
-    { exact (h₂.2 ⟨hyp, hxy⟩).1, }, },
+    { cases hR y x with hR hR, { exact hR },
+      exact h₁.mpr (imp_intro hyx) hR },
+    { exact (h.2.mpr ⟨hyx, hxy⟩).1 } }, -- these subproofs are so similar - is there a way we might combine them? -Ben
 end
 
 lemma same_order_of_P_P' (hR : P R x y) (hR' : P R' x y) : same_order R R' x y x y := 
@@ -151,11 +152,8 @@ lemma same_order_of_reverseP_P' (hR : P R y x) (hR' : P R' y x) : same_order R R
 ⟨⟨⟨hR.2.elim, hR'.2.elim⟩, ⟨λ h, hR'.1, λ h, hR.1⟩⟩, 
   ⟨⟨(nP_of_reverseP hR).elim, (nP_of_reverseP hR').elim⟩, ⟨λ h, hR', λ h, hR⟩⟩⟩
 
-lemma same_order'_iff_reverse (r r' : σ → σ → Prop) (x y : σ):
-same_order' r r' x y x y ↔ same_order' r r' y x y x := 
-  by simp only [same_order', and.comm, iff_self]
-
-example (p q : Prop) : p ∧ q ↔ q ∧ p := and.comm
+lemma same_order'_comm : same_order' R R' x y x y ↔ same_order' R R' y x y x :=
+and.comm
 
 def is_maximal_element (x : σ) (S : finset σ) (R : σ → σ → Prop) : Prop :=
 ∀ y ∈ S, ¬P R y x
@@ -187,10 +185,6 @@ begin
       { exact ⟨_, he, ed⟩ } } },
 end
 
-lemma forall_exists_trans_gen (R : σ → σ → Prop) {S : finset σ} (hR : ∀ a ∈ S, ∃ b ∈ S, R b a) :
-  ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a :=
-λ a ha, let ⟨b, hb, h⟩ := hR a ha in ⟨b, hb, trans_gen.single h⟩
-
 /- Sen's Theorem on the existence of a choice function, from 
   *Social Choice and Collective Welfare* (1970). 
 
@@ -200,7 +194,6 @@ theorem best_elem_iff_acyclical [fintype σ]
   (htot : total R) : 
   (∀ X : finset σ, X.nonempty → ∃ b ∈ X, is_best_element b X R) ↔ acyclical R := 
 begin
-  classical,
   refine ⟨λ h x hx, _, λ h_acyc X X_ne, _⟩,
   { obtain ⟨b, b_in, hb⟩ := h {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a} ⟨x, by simpa⟩, -- can we maybe pull this sort of thing out into its own general lemma?
     simp only [true_and, sep_def, mem_filter, mem_univ] at b_in,

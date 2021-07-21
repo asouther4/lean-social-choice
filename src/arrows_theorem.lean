@@ -45,11 +45,20 @@ def is_top (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop :=
 def is_extremal (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
 is_bot b r X ∨ is_top b r X
 
-lemma not_bot : ¬is_bot b r X ↔ ∃ a (h1 : a ∈ X) (h2 : a ≠ b), ¬P r a b :=
+lemma not_bot : ¬is_bot b r X ↔ ∃ a (h : a ∈ X) (h : a ≠ b), ¬P r a b :=
 by simp only [is_bot, not_forall]
 
-lemma not_top : ¬is_top b r X ↔ ∃ a (h1 : a ∈ X) (h2 : a ≠ b), ¬P r b a :=
+lemma not_top : ¬is_top b r X ↔ ∃ a (h : a ∈ X) (h : a ≠ b), ¬P r b a :=
 by simp only [is_top, not_forall]
+
+lemma not_extremal : ¬is_extremal b r X ↔ 
+  (∃ a (h : a ∈ X) (h : a ≠ b), ¬P r a b) ∧ (∃ c (h : c ∈ X) (h : c ≠ b), ¬P r b c) := 
+by simp only [is_extremal, is_bot, is_top, not_or_distrib, not_forall]
+
+lemma not_extremal' (hr : total r) (h : ¬ is_extremal b r X) : -- maybe make an `iff`? maybe combine with `exists_of_not_extremal`? -Ben
+  ∃ a c ∈ X, a ≠ b ∧ c ≠ b ∧ r a b ∧ r b c := 
+let ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := not_extremal.mp h in
+  ⟨a, c, ha, hc, hab, hcb, R_of_nP_total hr hPa, R_of_nP_total hr hPc⟩
 
 lemma is_top.not_bot (htop : is_top b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_bot b r X :=
 let ⟨a, a_in, hab⟩ := h in not_bot.mpr ⟨a, a_in, hab, nP_of_reverseP (htop a a_in hab)⟩
@@ -265,17 +274,15 @@ theorem is_bot_of_forall_is_bot (b_in : b ∈ X) (hwp : weak_pareto f X)
   is_bot b (f R) X :=
 λ a a_in hab, hwp a b a_in b_in R $ λ i, hbot i a a_in hab
 
-lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extremal b (f R) X):
+lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extremal b (f R) X) : -- it may be worth generalizing this; see `not_extremal'` above - Ben
   ∃ a c ∈ X, a ≠ b ∧ c ≠ b ∧ a ≠ c ∧ f R a b ∧ f R b c := 
 begin
-  unfold is_extremal is_bot is_top at h, push_neg at h,
-  obtain ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := h,
-  obtain ⟨hf, hfa, hfc⟩ := ⟨(f R).total, R_of_nP_total hf hPa, R_of_nP_total hf hPc⟩,
+  obtain ⟨a, c, ha, hc, hab, hcb, hfa, hfc⟩ := not_extremal' (f R).total h,
   obtain hac | rfl := @ne_or_eq _ a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hfa, hfc⟩ },
   obtain ⟨d, hd, hda, hdb⟩ := exists_third_distinct_mem hX ha hb hab,
-  cases hf d b,
-  { exact ⟨d, a, hd, hc, hdb, hcb, hda, h, hfc⟩ },
-  { exact ⟨a, d, ha, hd, hab, hdb, hda.symm, hfa, h⟩ },
+  obtain hfd | hfd := (f R).total d b,
+  { exact ⟨d, a, hd, hc, hdb, hcb, hda, hfd, hfc⟩ },
+  { exact ⟨a, d, ha, hd, hab, hdb, hda.symm, hfa, hfd⟩ },
 end
 
 /-! ### The Proof Begins -/

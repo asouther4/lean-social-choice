@@ -45,22 +45,20 @@ def is_top (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop :=
 def is_extremal (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
 is_bot b r X ∨ is_top b r X
 
+lemma not_bot : ¬is_bot b r X ↔ ∃ a (h1 : a ∈ X) (h2 : a ≠ b), ¬P r a b :=
+by simp only [is_bot, not_forall]
+
+lemma not_top : ¬is_top b r X ↔ ∃ a (h1 : a ∈ X) (h2 : a ≠ b), ¬P r b a :=
+by simp only [is_top, not_forall]
+
 lemma is_top.not_bot (htop : is_top b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_bot b r X :=
-begin
-  simp only [is_bot, not_forall],
-  rcases h with ⟨a, a_in, hab⟩,
-  exact ⟨a, a_in, hab, nP_of_reverseP (htop a a_in hab)⟩,
-end
+let ⟨a, a_in, hab⟩ := h in not_bot.mpr ⟨a, a_in, hab, nP_of_reverseP (htop a a_in hab)⟩
 
 lemma is_top.not_bot' (htop : is_top b r X) (hX : 2 ≤ X.card) (hb : b ∈ X) : ¬is_bot b r X :=
 htop.not_bot $ exists_second_distinct_mem hX hb
 
 lemma is_bot.not_top (hbot : is_bot b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_top b r X :=
-begin
-  simp only [is_top, not_forall],
-  rcases h with ⟨a, a_in, hab⟩,
-  exact ⟨a, a_in, hab, nP_of_reverseP (hbot a a_in hab)⟩,
-end
+let ⟨a, a_in, hab⟩ := h in not_top.mpr ⟨a, a_in, hab, nP_of_reverseP (hbot a a_in hab)⟩
 
 lemma is_bot.not_top' (hbot : is_bot b r X) (hX : 2 ≤ X.card) (hb : b ∈ X) : ¬is_top b r X :=
 hbot.not_top $ exists_second_distinct_mem hX hb

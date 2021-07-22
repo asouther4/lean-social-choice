@@ -278,7 +278,7 @@ lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extre
   ∃ a c ∈ X, a ≠ b ∧ c ≠ b ∧ a ≠ c ∧ f R a b ∧ f R b c := 
 begin
   obtain ⟨a, c, ha, hc, hab, hcb, hfa, hfc⟩ := not_extremal' (f R).total h,
-  obtain hac | rfl := @ne_or_eq _ a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hfa, hfc⟩ },
+  obtain hac | rfl := ne_or_eq a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hfa, hfc⟩ },
   obtain ⟨d, hd, hda, hdb⟩ := exists_third_distinct_mem hX ha hb hab,
   obtain hfd | hfd := (f R).total d b,
   { exact ⟨d, a, hd, hc, hdb, hcb, hda, hfd, hfc⟩ },
@@ -342,8 +342,7 @@ begin
       { have : i ∈ {j ∈ univ | is_bot b (R j) X}, { rw ← h_insert, exact mem_insert_self i D },
         simpa },
       { simp only [R', is_top_maketop, if_pos] } },
-    { refine IH _ hextr' ((first_step hwp hind hX b_in hextr').is_bot hR'),
-      ext j,
+    { refine IH (ext (λ j, _)) hextr' ((first_step hwp hind hX b_in hextr').is_bot hR'),
       simp only [true_and, sep_def, mem_filter, mem_univ, R'],
       split; intro hj,
       { suffices : j ∈ insert i D,
@@ -393,7 +392,7 @@ begin
   rw (hind Q Q' c a c_in a_in hQ').1,
   refine P_trans (f Q').trans ((hind R Q' c b c_in b_in _).1.1 (i_piv.2.2.2.2.2.1 c c_in hcb)) 
     ((hind R' Q' b a b_in a_in _).1.1 (i_piv.2.2.2.2.2.2 a a_in hab)); 
-      intro j; split; split; intro H; rcases @eq_or_ne _ j i with rfl | hj,
+      intro j; split; split; intro H; rcases eq_or_ne j i with rfl | hj,
   { convert makeabove_below hcb h },  
   { convert (is_bot_makebot b (Q j) X) c c_in hcb,
     apply Q'bot j hj,
@@ -468,7 +467,7 @@ begin
         (not_bot.mpr ⟨a, ha, hab, hnot⟩) a ha hab)).2 (hbot a ha hab).1 }, 
     split; apply hdict; assumption },
   refine ⟨i, λ x y hx hy Rᵢ hRᵢ, _⟩,
-  rcases @eq_or_ne _ b x with rfl | hbx; rcases @eq_or_ne _ b y with rfl | hby,
+  rcases eq_or_ne b x with rfl | hbx; rcases eq_or_ne b y with rfl | hby,
   { exact (false_of_P_self hRᵢ).elim },
   { exact (h y hy hby.symm Rᵢ).2 hRᵢ },
   { exact (h x hx hbx.symm Rᵢ).1 hRᵢ },

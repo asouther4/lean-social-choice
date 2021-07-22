@@ -100,11 +100,8 @@ lemma P_trans (htrans : transitive R) (h1 : P R x y) (h2 : P R y z) : P R x z :=
 def acyclical (R : σ → σ → Prop) : Prop := 
 ∀ x : σ, ¬trans_gen (P R) x x
 
-lemma R_of_nP_total (hR : total R) (h : ¬P R y x) : R x y :=
-begin
-  by_cases hyp : R y x,
-  exacts [not_and_not_right.mp h hyp, or_iff_not_imp_right.mp (hR x y) hyp],
-end
+lemma R_of_nP_total (htot : total R) (h : ¬P R y x) : R x y :=
+by { cases htot x y with hR hR, exacts [hR, not_and_not_right.mp h hR] }
 
 lemma nP_of_reverseP (h : P R x y) : ¬P R y x :=
 not_and_not_right.mpr $ λ n, h.1

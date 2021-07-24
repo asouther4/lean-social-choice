@@ -345,11 +345,9 @@ begin
     { refine IH (ext (λ j, _)) hextr' ((first_step hwp hind hX b_in hextr').is_bot hR'),
       simp only [true_and, sep_def, mem_filter, mem_univ, R'],
       split; intro hj,
-      { suffices : j ∈ insert i D,
-        { have hji : j ≠ i, { rintro rfl, exact hi hj },
-          rw h_insert at this,
-          simpa [hji] },
-        exact mem_insert_of_mem hj },
+      { have hji : j ≠ i, { rintro rfl, exact hi hj },
+        have : j ∈ {i ∈ univ | is_bot b ⇑(R i) X}, { convert mem_insert_of_mem hj, rw h_insert },
+        simpa [hji] },
       { have hji : j ≠ i,
         { rintro rfl,
           obtain ⟨a, a_in, hab⟩ := exists_second_distinct_mem hX.le b_in,
@@ -364,7 +362,7 @@ there exists an individual who is pivotal over that social state.  -/
 lemma second_step [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
   has_pivot f X b := 
-have hbot : is_bot b (r₂ b) X, by simp [is_bot, r₂, P, ←pref_order.eq_coe],
+have hbot : is_bot b (r₂ b) X, by simp [is_bot, r₂, P, ← pref_order.eq_coe],
 second_step_aux hwp hind hX b_in rfl (λ i, hbot.is_extremal) $
   is_bot_of_forall_is_bot b_in hwp $ λ i, hbot
 
@@ -394,7 +392,7 @@ begin
     ((hind R' Q' b a b_in a_in _).1.1 (i_piv.2.2.2.2.2.2 a a_in hab)); 
       intro j; split; split; intro H; rcases eq_or_ne j i with rfl | hj,
   { convert makeabove_below hcb h },  
-  { convert (is_bot_makebot b (Q j) X) c c_in hcb,
+  { convert is_bot_makebot b (Q j) X c c_in hcb,
     apply Q'bot j hj,
     unfold is_bot,
     by_contra hbot, push_neg at hbot,

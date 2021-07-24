@@ -45,22 +45,29 @@ def is_top (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop :=
 def is_extremal (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
 is_bot b r X ∨ is_top b r X
 
+lemma not_bot : ¬is_bot b r X ↔ ∃ a (h : a ∈ X) (h : a ≠ b), ¬P r a b :=
+by simp only [is_bot, not_forall]
+
+lemma not_top : ¬is_top b r X ↔ ∃ a (h : a ∈ X) (h : a ≠ b), ¬P r b a :=
+by simp only [is_top, not_forall]
+
+lemma not_extremal : ¬is_extremal b r X ↔ 
+  (∃ a (h : a ∈ X) (h : a ≠ b), ¬P r a b) ∧ (∃ c (h : c ∈ X) (h : c ≠ b), ¬P r b c) := 
+by simp only [is_extremal, not_or_distrib, not_bot, not_top]
+
+lemma not_extremal' (hr : total r) (h : ¬ is_extremal b r X) : -- maybe make an `iff`? maybe combine with `exists_of_not_extremal`? -Ben
+  ∃ a c ∈ X, a ≠ b ∧ c ≠ b ∧ r a b ∧ r b c := 
+let ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := not_extremal.mp h in
+  ⟨a, c, ha, hc, hab, hcb, R_of_nP_total hr hPa, R_of_nP_total hr hPc⟩
+
 lemma is_top.not_bot (htop : is_top b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_bot b r X :=
-begin
-  simp only [is_bot, not_forall],
-  rcases h with ⟨a, a_in, hab⟩,
-  exact ⟨a, a_in, hab, nP_of_reverseP (htop a a_in hab)⟩,
-end
+let ⟨a, a_in, hab⟩ := h in not_bot.mpr ⟨a, a_in, hab, nP_of_reverseP (htop a a_in hab)⟩
 
 lemma is_top.not_bot' (htop : is_top b r X) (hX : 2 ≤ X.card) (hb : b ∈ X) : ¬is_bot b r X :=
 htop.not_bot $ exists_second_distinct_mem hX hb
 
 lemma is_bot.not_top (hbot : is_bot b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_top b r X :=
-begin
-  simp only [is_top, not_forall],
-  rcases h with ⟨a, a_in, hab⟩,
-  exact ⟨a, a_in, hab, nP_of_reverseP (hbot a a_in hab)⟩,
-end
+let ⟨a, a_in, hab⟩ := h in not_top.mpr ⟨a, a_in, hab, nP_of_reverseP (hbot a a_in hab)⟩
 
 lemma is_bot.not_top' (hbot : is_bot b r X) (hX : 2 ≤ X.card) (hb : b ∈ X) : ¬is_top b r X :=
 hbot.not_top $ exists_second_distinct_mem hX hb
@@ -267,17 +274,15 @@ theorem is_bot_of_forall_is_bot (b_in : b ∈ X) (hwp : weak_pareto f X)
   is_bot b (f R) X :=
 λ a a_in hab, hwp a b a_in b_in R $ λ i, hbot i a a_in hab
 
-lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extremal b (f R) X):
+lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extremal b (f R) X) : -- it may be worth generalizing this; see `not_extremal'` above - Ben
   ∃ a c ∈ X, a ≠ b ∧ c ≠ b ∧ a ≠ c ∧ f R a b ∧ f R b c := 
 begin
-  unfold is_extremal is_bot is_top at h, push_neg at h,
-  obtain ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := h,
-  obtain ⟨hf, hfa, hfc⟩ := ⟨(f R).total, R_of_nP_total hf hPa, R_of_nP_total hf hPc⟩,
-  obtain hac | rfl := @ne_or_eq _ a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hfa, hfc⟩ },
+  obtain ⟨a, c, ha, hc, hab, hcb, hfa, hfc⟩ := not_extremal' (f R).total h,
+  obtain hac | rfl := ne_or_eq a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hfa, hfc⟩ },
   obtain ⟨d, hd, hda, hdb⟩ := exists_third_distinct_mem hX ha hb hab,
-  cases hf d b,
-  { exact ⟨d, a, hd, hc, hdb, hcb, hda, h, hfc⟩ },
-  { exact ⟨a, d, ha, hd, hab, hdb, hda.symm, hfa, h⟩ },
+  obtain hfd | hfd := (f R).total d b,
+  { exact ⟨d, a, hd, hc, hdb, hcb, hda, hfd, hfc⟩ },
+  { exact ⟨a, d, ha, hd, hab, hdb, hda.symm, hfa, hfd⟩ },
 end
 
 /-! ### The Proof Begins -/
@@ -297,22 +302,12 @@ begin
     ((f _).trans (((same_order_iff_same_order' (f R).total (f _).total).2 -- wouldn't it be better just to do everything using `same_order'`? -Ben
       (hind R _ a b ha hb (λ j, _))).1.1.1 hfa)
         (((same_order_iff_same_order' (f R).total (f _).total).2
-          (hind R _ b c hb hc (λ j, ⟨⟨λ h, _ , λ h, _⟩, ⟨λ h, _ , λ h, _⟩⟩))).1.1.1 hfb)),
-  { simp only [same_order', makeabove_noteq' (R j) a hcb.symm hac, iff_self, and_self] },
-  { apply H1,
-    simp only [is_bot, not_forall],
-    exact ⟨c, hc, hcb, nP_of_reverseP h⟩ },
-  { by_contra hR,
-    refine h.2 (H2 _).1,
-    simp only [is_top, not_forall],
-    exact ⟨c, hc, hcb, hR⟩ },
-  { apply H2,
-    simp only [is_top, not_forall],
-    exact ⟨c, hc, hcb, nP_of_reverseP h⟩ },
-  { by_contra hR,
-    refine h.2 (H1 _).1,
-    simp only [is_bot, not_forall],
-    exact ⟨c, hc, hcb, hR⟩ },
+          (hind R _ b c hb hc (λ j, ⟨⟨λ h, H1 (not_bot.mpr ⟨c, hc, hcb, nP_of_reverseP h⟩), _⟩,
+            ⟨λ h, H2 (not_top.mpr ⟨c, hc, hcb, nP_of_reverseP h⟩), _⟩⟩))).1.1.1 hfb)),
+  { simp only [same_order', makeabove_noteq' _ a hcb.symm hac, iff_self, and_self] },
+  all_goals { rintro ⟨-, h⟩, contrapose! h },
+  { exact (H2 (not_top.mpr ⟨c, hc, hcb, h⟩)).1 },
+  { exact (H1 (not_bot.mpr ⟨c, hc, hcb, h⟩)).1 },
 end
 
 /-- We define relation `r₂`, a `pref_order` we will use in `second_step`. -/
@@ -347,15 +342,12 @@ begin
       { have : i ∈ {j ∈ univ | is_bot b (R j) X}, { rw ← h_insert, exact mem_insert_self i D },
         simpa },
       { simp only [R', is_top_maketop, if_pos] } },
-    { refine IH _ hextr' ((first_step hwp hind hX b_in hextr').is_bot hR'),
-      ext j,
+    { refine IH (ext (λ j, _)) hextr' ((first_step hwp hind hX b_in hextr').is_bot hR'),
       simp only [true_and, sep_def, mem_filter, mem_univ, R'],
       split; intro hj,
-      { suffices : j ∈ insert i D,
-        { have hji : j ≠ i, { rintro rfl, exact hi hj },
-          rw h_insert at this,
-          simpa [hji] },
-        exact mem_insert_of_mem hj },
+      { have hji : j ≠ i, { rintro rfl, exact hi hj },
+        have : j ∈ {i ∈ univ | is_bot b ⇑(R i) X}, { convert mem_insert_of_mem hj, rw h_insert },
+        simpa [hji] },
       { have hji : j ≠ i,
         { rintro rfl,
           obtain ⟨a, a_in, hab⟩ := exists_second_distinct_mem hX.le b_in,
@@ -370,7 +362,7 @@ there exists an individual who is pivotal over that social state.  -/
 lemma second_step [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
   has_pivot f X b := 
-have hbot : is_bot b (r₂ b) X, by simp [is_bot, r₂, P, ←pref_order.eq_coe],
+have hbot : is_bot b (r₂ b) X, by simp [is_bot, r₂, P, ← pref_order.eq_coe],
 second_step_aux hwp hind hX b_in rfl (λ i, hbot.is_extremal) $
   is_bot_of_forall_is_bot b_in hwp $ λ i, hbot
 
@@ -398,9 +390,9 @@ begin
   rw (hind Q Q' c a c_in a_in hQ').1,
   refine P_trans (f Q').trans ((hind R Q' c b c_in b_in _).1.1 (i_piv.2.2.2.2.2.1 c c_in hcb)) 
     ((hind R' Q' b a b_in a_in _).1.1 (i_piv.2.2.2.2.2.2 a a_in hab)); 
-      intro j; split; split; intro H; rcases @eq_or_ne _ j i with rfl | hj,
+      intro j; split; split; intro H; rcases eq_or_ne j i with rfl | hj,
   { convert makeabove_below hcb h },  
-  { convert (is_bot_makebot b (Q j) X) c c_in hcb,
+  { convert is_bot_makebot b (Q j) X c c_in hcb,
     apply Q'bot j hj,
     unfold is_bot,
     by_contra hbot, push_neg at hbot,
@@ -412,8 +404,7 @@ begin
   { by_contra H',
     apply nP_of_reverseP ((is_top_maketop b (Q j) X) c c_in hcb),
     rwa ← Q'top j hj,
-    simp only [is_bot, not_forall], 
-    exact ⟨c, c_in, hcb, H'⟩ },
+    exact not_bot.mpr ⟨c, c_in, hcb, H'⟩ },
   { exact absurd (i_piv.2.2.2.1 c c_in hcb).1 H.2 },
   { convert is_top_maketop b (Q j) X c c_in hcb,
     exact Q'top j hj (λ hbot, H.2 (hbot c c_in hcb).1) },
@@ -422,15 +413,12 @@ begin
   { by_contra H',
     apply absurd (is_bot_makebot b (Q j) X c c_in hcb).1,
     convert ← H.2,
-    refine Q'bot j hj ((i_piv.2.1 j).is_bot _),
-    simp only [is_top, not_forall],
-    exact ⟨c, c_in, hcb, H'⟩ }, 
+    exact Q'bot j hj ((i_piv.2.1 j).is_bot (not_top.mpr ⟨c, c_in, hcb, H'⟩)) }, 
   { convert makeabove_above (Q j) hab },
   { convert is_top_maketop b (Q j) X a a_in hab,
     apply Q'top j hj,
     rw i_piv.1 j hj a b a_in b_in,
-    simp only [is_bot, not_forall],
-    exact ⟨a, a_in, hab, nP_of_reverseP H⟩ },
+    exact not_bot.mpr ⟨a, a_in, hab, nP_of_reverseP H⟩ },
   { exact i_piv.2.2.2.2.1 a a_in hab },
   { rw ← i_piv.1 j hj a b a_in b_in,
     refine ((i_piv.2.1 j).is_top (λ hbot, nP_of_reverseP H _)) a a_in hab,
@@ -440,9 +428,7 @@ begin
   { convert is_bot_makebot b (Q j) X a a_in hab,
     apply Q'bot j hj,
     rw i_piv.1 j hj a b a_in b_in,
-    apply (i_piv.2.2.1 j).is_bot,
-    simp only [is_top, not_forall],
-    exact ⟨a, a_in, hab, nP_of_reverseP H⟩ },
+    exact (i_piv.2.2.1 j).is_bot (not_top.mpr ⟨a, a_in, hab, nP_of_reverseP H⟩) },
   { apply absurd (makeabove_above (Q j) hab).1,
     convert ← H.2 },
   { rw ← i_piv.1 j hj a b a_in b_in,
@@ -464,23 +450,22 @@ begin
   obtain ⟨i, i_piv⟩ := hpiv b hb,
   have h : ∀ a ∈ X, a ≠ b → ∀ Rᵢ : ι → pref_order σ, 
           (P (Rᵢ i) a b → P (f Rᵢ) a b) ∧ (P (Rᵢ i) b a → P (f Rᵢ) b a), -- is there perhaps a better way to state this? -Ben
-  { intros a a_in hab Rᵢ,
-    obtain ⟨c, hc, hca, hcb⟩ := exists_third_distinct_mem hX a_in hb hab,
+  { intros a ha hab Rᵢ,
+    obtain ⟨c, hc, hca, hcb⟩ := exists_third_distinct_mem hX ha hb hab,
     obtain ⟨hac, hbc⟩ := ⟨hca.symm, hcb.symm⟩,
     obtain ⟨j, j_piv⟩ := hpiv c hc,
     obtain hdict := third_step hind hc j_piv, 
     obtain rfl : j = i,
     { by_contra hji,
       obtain ⟨R, R', hso, hextr, -, -, -, hbot, htop⟩ := i_piv,
-      refine (htop a a_in hab).2 (hdict b a hb a_in hbc hac R' _).1,
-      rw ← hso j hji a b a_in hb,
+      refine (htop a ha hab).2 (hdict b a hb ha hbc hac R' _).1,
+      rw ← hso j hji a b ha hb,
       by_contra hnot,
-      refine (hdict a b a_in hb hac hbc R ((hextr j).is_top _ a a_in hab)).2 (hbot a a_in hab).1,
-      simp only [is_bot, not_forall], 
-      exact ⟨a, a_in, hab, hnot⟩ }, 
+      exact (hdict a b ha hb hac hbc R ((hextr j).is_top
+        (not_bot.mpr ⟨a, ha, hab, hnot⟩) a ha hab)).2 (hbot a ha hab).1 }, 
     split; apply hdict; assumption },
   refine ⟨i, λ x y hx hy Rᵢ hRᵢ, _⟩,
-  rcases @eq_or_ne _ b x with rfl | hbx; rcases @eq_or_ne _ b y with rfl | hby,
+  rcases eq_or_ne b x with rfl | hbx; rcases eq_or_ne b y with rfl | hby,
   { exact (false_of_P_self hRᵢ).elim },
   { exact (h y hy hby.symm Rᵢ).2 hRᵢ },
   { exact (h x hx hbx.symm Rᵢ).1 hRᵢ },

@@ -192,7 +192,7 @@ lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extre
 begin
   unfold is_extremal is_bot is_top at h, push_neg at h,
   obtain ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := h,
-  obtain hac | rfl := @ne_or_eq _ a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hPa, hPc⟩ },
+  obtain hac | rfl := ne_or_eq a c, { exact ⟨a, c, ha, hc, hab, hcb, hac, hPa, hPc⟩ },
   obtain ⟨d, hd, hda, hdb⟩ := exists_third_distinct_mem hX ha hb hab,
   cases lt_or_le (f P b) (f P d),
   { exact ⟨d, a, hd, hc, hdb, hcb, hda, h.le, hPc⟩ },
@@ -425,7 +425,7 @@ begin
       exact asymm (hbot a ha hab) (hdict a b ha hb hac hbc R (h a ha hab hnot a ha hab)) },
     split; apply hdict; assumption },
   refine ⟨i, λ x y hx hy Pᵢ hPᵢ, _⟩,
-  rcases @eq_or_ne _ b x with rfl | hbx; rcases @eq_or_ne _ b y with rfl | hby, -- @s will drop when we merge master
+  rcases eq_or_ne b x with rfl | hbx; rcases eq_or_ne b y with rfl | hby,
   { exact ((irrefl _) hPᵢ).rec _ },
   { exact (h y hy hby.symm Pᵢ).2 hPᵢ },
   { exact (h x hx hbx.symm Pᵢ).1 hPᵢ },

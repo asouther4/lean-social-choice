@@ -1,8 +1,8 @@
 [package]
 name = "lean_social_choice"
 version = "0.1"
-lean_version = "leanprover-community/lean:3.31.0"
+lean_version = "leanprover-community/lean:3.32.1"
 path = "src"
 
 [dependencies]
-mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "4a864ed00b8eb07d2a66d914a27f7aebceb93c23"}
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "94e4667b04bbcb56587d4dc765fb8e179bb79178"}

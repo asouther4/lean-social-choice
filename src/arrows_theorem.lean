@@ -30,60 +30,64 @@ variables {σ ι : Type} {x y x' y' a b : σ} {r r' : σ → σ → Prop} {X : f
 
 /-! ### Some basic definitions and lemmas -/
 
-/-- A social state `b` is *bottom* of a finite set of social states `X` with respect to 
+/-- A social state `b` is *strictly worst* of a finite set of social states `X` with respect to 
   a ranking `p` if `b` is ranked strictly lower than every other `a ∈ X`. -/
-def is_bot (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop :=
+def is_strictly_worst (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop :=
 ∀ a ∈ X, a ≠ b → P r a b
 
-/-- A social state `b` is *top* of a finite set of social states `X` with respect to
+/-- A social state `b` is *strictly best* of a finite set of social states `X` with respect to
   a ranking `p` if `b` is ranked strictly higher than every other `a ∈ X`. -/
-def is_top (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
+def is_strictly_best (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
 ∀ a ∈ X, a ≠ b → P r b a
 
 /-- A social state `b` is *extremal* with respect to a finite set of social states `X` 
-  and a ranking `p` if `b` is either bottom or top of `X`. -/
+  and a ranking `p` if `b` is either strictly worst or strictly best of `X`. -/
 def is_extremal (b : σ) (r : σ → σ → Prop) (X : finset σ) : Prop := 
-is_bot b r X ∨ is_top b r X
+is_strictly_worst b r X ∨ is_strictly_best b r X
 
-lemma not_bot : ¬is_bot b r X ↔ ∃ a (h : a ∈ X) (h : a ≠ b), ¬P r a b :=
-by simp only [is_bot, not_forall]
+lemma not_strictly_worst : ¬is_strictly_worst b r X ↔ ∃ a (h : a ∈ X) (h : a ≠ b), ¬P r a b :=
+by simp only [is_strictly_worst, not_forall]
 
-lemma not_top : ¬is_top b r X ↔ ∃ a (h : a ∈ X) (h : a ≠ b), ¬P r b a :=
-by simp only [is_top, not_forall]
+lemma not_strictly_best : ¬is_strictly_best b r X ↔ ∃ a (h : a ∈ X) (h : a ≠ b), ¬P r b a :=
+by simp only [is_strictly_best, not_forall]
 
 lemma not_extremal : ¬is_extremal b r X ↔ 
   (∃ a (h : a ∈ X) (h : a ≠ b), ¬P r a b) ∧ (∃ c (h : c ∈ X) (h : c ≠ b), ¬P r b c) := 
-by simp only [is_extremal, not_or_distrib, not_bot, not_top]
+by simp only [is_extremal, not_or_distrib, not_strictly_worst, not_strictly_best]
 
 lemma not_extremal' (hr : total r) (h : ¬ is_extremal b r X) : -- maybe make an `iff`? maybe combine with `exists_of_not_extremal`? -Ben
   ∃ a c ∈ X, a ≠ b ∧ c ≠ b ∧ r a b ∧ r b c := 
 let ⟨⟨c, hc, hcb, hPc⟩, ⟨a, ha, hab, hPa⟩⟩ := not_extremal.mp h in
   ⟨a, c, ha, hc, hab, hcb, R_of_nP_total hr hPa, R_of_nP_total hr hPc⟩
 
-lemma is_top.not_bot (htop : is_top b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_bot b r X :=
-let ⟨a, a_in, hab⟩ := h in not_bot.mpr ⟨a, a_in, hab, nP_of_reverseP (htop a a_in hab)⟩
+lemma is_strictly_best.not_strictly_worst (htop : is_strictly_best b r X) (h : ∃ a ∈ X, a ≠ b) : 
+  ¬is_strictly_worst b r X :=
+let ⟨a, a_in, hab⟩ := h in not_strictly_worst.mpr ⟨a, a_in, hab, nP_of_reverseP (htop a a_in hab)⟩
 
-lemma is_top.not_bot' (htop : is_top b r X) (hX : 2 ≤ X.card) (hb : b ∈ X) : ¬is_bot b r X :=
-htop.not_bot $ exists_second_distinct_mem hX hb
+lemma is_strictly_best.not_strictly_worst' (htop : is_strictly_best b r X) (hX : 2 ≤ X.card) (hb : b ∈ X) :
+  ¬is_strictly_worst b r X :=
+htop.not_strictly_worst $ exists_second_distinct_mem hX hb
 
-lemma is_bot.not_top (hbot : is_bot b r X) (h : ∃ a ∈ X, a ≠ b) : ¬is_top b r X :=
-let ⟨a, a_in, hab⟩ := h in not_top.mpr ⟨a, a_in, hab, nP_of_reverseP (hbot a a_in hab)⟩
+lemma is_strictly_worst.not_strictly_best (hbot : is_strictly_worst b r X) (h : ∃ a ∈ X, a ≠ b) :
+  ¬is_strictly_best b r X :=
+let ⟨a, a_in, hab⟩ := h in not_strictly_best.mpr ⟨a, a_in, hab, nP_of_reverseP (hbot a a_in hab)⟩
 
-lemma is_bot.not_top' (hbot : is_bot b r X) (hX : 2 ≤ X.card) (hb : b ∈ X) : ¬is_top b r X :=
-hbot.not_top $ exists_second_distinct_mem hX hb
+lemma is_strictly_worst.not_strictly_best' (hbot : is_strictly_worst b r X) (hX : 2 ≤ X.card) (hb : b ∈ X) :
+ ¬is_strictly_best b r X :=
+hbot.not_strictly_best $ exists_second_distinct_mem hX hb
 
-lemma is_extremal.is_top (hextr : is_extremal b r X) (not_bot : ¬is_bot b r X) :
-  is_top b r X := 
-hextr.resolve_left not_bot 
+lemma is_extremal.is_strictly_best (hextr : is_extremal b r X) (not_strictly_worst : ¬is_strictly_worst b r X) :
+  is_strictly_best b r X := 
+hextr.resolve_left not_strictly_worst 
 
-lemma is_extremal.is_bot (hextr : is_extremal b r X) (not_top : ¬is_top b r X) :
-  is_bot b r X := 
-hextr.resolve_right not_top 
+lemma is_extremal.is_strictly_worst (hextr : is_extremal b r X) (not_strictly_best : ¬is_strictly_best b r X) :
+  is_strictly_worst b r X := 
+hextr.resolve_right not_strictly_best 
 
-lemma is_bot.is_extremal (hbot : is_bot b r X) : is_extremal b r X := 
+lemma is_strictly_worst.is_extremal (hbot : is_strictly_worst b r X) : is_extremal b r X := 
 or.inl hbot
 
-lemma is_top.is_extremal (hbot : is_top b r X) : is_extremal b r X := 
+lemma is_strictly_best.is_extremal (hbot : is_strictly_best b r X) : is_extremal b r X := 
 or.inr hbot
 
 /-! ### "Make" functions -/
@@ -191,13 +195,13 @@ lemma makeabove_noteq' (r : pref_order σ) (a : σ) {b c d : σ} (hc : c ≠ b) 
   (P (makeabove r a b) c d ↔ P r c d) ∧ (P (makeabove r a b) d c ↔ P r d c) :=
 by simp [makeabove, P, ← pref_order.eq_coe, hc, hd]
 
-lemma is_top_maketop (b : σ) (r : pref_order σ) (X : finset σ) :
-  is_top b (maketop r b) X :=
-by simp [maketop, is_top, P, ← pref_order.eq_coe]
+lemma is_strictly_best_maketop (b : σ) (r : pref_order σ) (X : finset σ) :
+  is_strictly_best b (maketop r b) X :=
+by simp [maketop, is_strictly_best, P, ← pref_order.eq_coe]
 
-lemma is_bot_makebot (b : σ) (r : pref_order σ) (X : finset σ) :
-  is_bot b (makebot r b) X :=
-by simp [is_bot, makebot, P, ← pref_order.eq_coe]
+lemma is_strictly_worst_makebot (b : σ) (r : pref_order σ) (X : finset σ) :
+  is_strictly_worst b (makebot r b) X :=
+by simp [is_strictly_worst, makebot, P, ← pref_order.eq_coe]
 
 lemma makeabove_above {a b : σ} (r : pref_order σ) (ha : a ≠ b):
   P (makeabove r a b) b a :=
@@ -242,8 +246,8 @@ def is_pivotal (f : (ι → pref_order σ) → pref_order σ) (X : finset σ) (i
 ∃ (R R' : ι → pref_order σ),
   (∀ j : ι, j ≠ i → ∀ x y ∈ X, R j = R' j) ∧ 
     (∀ i : ι, is_extremal b (R i) X) ∧ (∀ i : ι, is_extremal b (R' i) X) ∧
-      (is_bot b (R i) X) ∧ (is_top b (R' i) X) ∧ 
-        (is_bot b (f R) X) ∧ (is_top b (f R') X)
+      (is_strictly_worst b (R i) X) ∧ (is_strictly_best b (R' i) X) ∧ 
+        (is_strictly_worst b (f R) X) ∧ (is_strictly_best b (f R') X)
 
 /-- A social welfare function has a *pivot* with respect to a social state `b` if there exists an
   individual who is pivotal with respect to that function and `b`. -/
@@ -262,16 +266,16 @@ variables {R : ι → pref_order σ} {f : (ι → pref_order σ) → pref_order 
 
 /-- If every individual ranks a social state `b` at the top of its rankings, then society must also
   rank `b` at the top of its rankings. -/
-theorem is_top_of_forall_is_top (b_in : b ∈ X) (hwp : weak_pareto f X)
-  (htop : ∀ i, is_top b (R i) X) :
-  is_top b (f R) X := 
+theorem is_strictly_best_of_forall_is_strictly_best (b_in : b ∈ X) (hwp : weak_pareto f X)
+  (htop : ∀ i, is_strictly_best b (R i) X) :
+  is_strictly_best b (f R) X := 
 λ a a_in hab, hwp b a b_in a_in R $ λ i, htop i a a_in hab
 
 /-- If every individual ranks a social state `b` at the bottom of its rankings, then society must 
   also rank `b` at the bottom of its rankings. -/
-theorem is_bot_of_forall_is_bot (b_in : b ∈ X) (hwp : weak_pareto f X) 
-  (hbot : ∀ i, is_bot b (R i) X) :
-  is_bot b (f R) X :=
+theorem is_strictly_worst_of_forall_is_strictly_worst (b_in : b ∈ X) (hwp : weak_pareto f X) 
+  (hbot : ∀ i, is_strictly_worst b (R i) X) :
+  is_strictly_worst b (f R) X :=
 λ a a_in hab, hwp a b a_in b_in R $ λ i, hbot i a a_in hab
 
 lemma exists_of_not_extremal (hX : 3 ≤ X.card) (hb : b ∈ X) (h : ¬ is_extremal b (f R) X) : -- it may be worth generalizing this; see `not_extremal'` above - Ben
@@ -296,18 +300,18 @@ lemma first_step (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
 begin
   by_contra hnot,
   obtain ⟨a, c, ha, hc, hab, hcb, hac, hfa, hfb⟩ := exists_of_not_extremal hX hb hnot,
-  have H1 := λ {j} h, makeabove_below hcb.symm ((hextr j).is_top h a ha hab).2,
-  have H2 := λ {j} h, makeabove_above' hcb.symm ((hextr j).is_bot h a ha hab).1,
+  have H1 := λ {j} h, makeabove_below hcb.symm ((hextr j).is_strictly_best h a ha hab).2,
+  have H2 := λ {j} h, makeabove_above' hcb.symm ((hextr j).is_strictly_worst h a ha hab).1,
   refine (hwp c a hc ha (λ j, makeabove (R j) a c) (λ j, makeabove_above (R j) hac)).2 
     ((f _).trans (((same_order_iff_same_order' (f R).total (f _).total).2 -- wouldn't it be better just to do everything using `same_order'`? -Ben
       (hind R _ a b ha hb (λ j, _))).1.1.1 hfa)
         (((same_order_iff_same_order' (f R).total (f _).total).2
-          (hind R _ b c hb hc (λ j, ⟨⟨λ h, H1 (not_bot.mpr ⟨c, hc, hcb, nP_of_reverseP h⟩), _⟩,
-            ⟨λ h, H2 (not_top.mpr ⟨c, hc, hcb, nP_of_reverseP h⟩), _⟩⟩))).1.1.1 hfb)),
+          (hind R _ b c hb hc (λ j, ⟨⟨λ h, H1 (not_strictly_worst.mpr ⟨c, hc, hcb, nP_of_reverseP h⟩), _⟩,
+            ⟨λ h, H2 (not_strictly_best.mpr ⟨c, hc, hcb, nP_of_reverseP h⟩), _⟩⟩))).1.1.1 hfb)),
   { simp only [same_order', makeabove_noteq' _ a hcb.symm hac, iff_self, and_self] },
   all_goals { rintro ⟨-, h⟩, contrapose! h },
-  { exact (H2 (not_top.mpr ⟨c, hc, hcb, h⟩)).1 },
-  { exact (H1 (not_bot.mpr ⟨c, hc, hcb, h⟩)).1 },
+  { exact (H2 (not_strictly_best.mpr ⟨c, hc, hcb, h⟩)).1 },
+  { exact (H1 (not_strictly_worst.mpr ⟨c, hc, hcb, h⟩)).1 },
 end
 
 /-- We define relation `r₂`, a `pref_order` we will use in `second_step`. -/
@@ -322,37 +326,37 @@ end
 /- This is an auxiliary lemma used in the `second_step`. -/
 lemma second_step_aux [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 2 < X.card) (b_in : b ∈ X) {D' : finset ι} :
-  ∀ {R : ι → pref_order σ}, D' = {i ∈ univ | is_bot b (R i) X} → 
-    (∀ i, is_extremal b (R i) X) → is_bot b (f R) X → has_pivot f X b := 
+  ∀ {R : ι → pref_order σ}, D' = {i ∈ univ | is_strictly_worst b (R i) X} → 
+    (∀ i, is_extremal b (R i) X) → is_strictly_worst b (f R) X → has_pivot f X b := 
 begin
   refine finset.induction_on D'
-    (λ R h hextr hbot, absurd (is_top_of_forall_is_top b_in hwp (λ j, (hextr j).is_top _))
-                              (hbot.not_top (exists_second_distinct_mem hX.le b_in))) 
+    (λ R h hextr hbot, absurd (is_strictly_best_of_forall_is_strictly_best b_in hwp (λ j, (hextr j).is_strictly_best _))
+                              (hbot.not_strictly_best (exists_second_distinct_mem hX.le b_in))) 
     (λ i D hi IH R h_insert hextr hbot, _),
   { simpa using eq_empty_iff_forall_not_mem.mp h.symm j },
   { let R' := λ j, (ite (j = i) (maketop (R j) b) (R j)),
     have hextr' : ∀ j, is_extremal b (R' j) X,
     { intro j, simp only [R'], 
       split_ifs,
-      { exact (is_top_maketop b (R j) X).is_extremal },
+      { exact (is_strictly_best_maketop b (R j) X).is_extremal },
       { exact hextr j } },
-    by_cases hR' : is_top b (f R') X,
+    by_cases hR' : is_strictly_best b (f R') X,
     { refine ⟨i, R, R', λ j hj x y _ _, _, hextr, hextr', _, _, hbot, hR'⟩,
       { simp only [R', if_neg hj] },
-      { have : i ∈ {j ∈ univ | is_bot b (R j) X}, { rw ← h_insert, exact mem_insert_self i D },
+      { have : i ∈ {j ∈ univ | is_strictly_worst b (R j) X}, { rw ← h_insert, exact mem_insert_self i D },
         simpa },
-      { simp only [R', is_top_maketop, if_pos] } },
-    { refine IH (ext (λ j, _)) hextr' ((first_step hwp hind hX b_in hextr').is_bot hR'),
+      { simp only [R', is_strictly_best_maketop, if_pos] } },
+    { refine IH (ext (λ j, _)) hextr' ((first_step hwp hind hX b_in hextr').is_strictly_worst hR'),
       simp only [true_and, sep_def, mem_filter, mem_univ, R'],
       split; intro hj,
       { have hji : j ≠ i, { rintro rfl, exact hi hj },
-        have : j ∈ {i ∈ univ | is_bot b ⇑(R i) X}, { convert mem_insert_of_mem hj, rw h_insert },
+        have : j ∈ {i ∈ univ | is_strictly_worst b ⇑(R i) X}, { convert mem_insert_of_mem hj, rw h_insert },
         simpa [hji] },
       { have hji : j ≠ i,
         { rintro rfl,
           obtain ⟨a, a_in, hab⟩ := exists_second_distinct_mem hX.le b_in,
           simp only [if_pos] at hj,
-          exact (is_top_maketop b (R j) X a a_in hab).2 (hj a a_in hab).1 },
+          exact (is_strictly_best_maketop b (R j) X a a_in hab).2 (hj a a_in hab).1 },
         rw [← erase_insert hi, h_insert],
         simpa [hji] using hj } } },
 end
@@ -362,9 +366,9 @@ there exists an individual who is pivotal over that social state.  -/
 lemma second_step [fintype ι] (hwp : weak_pareto f X) (hind : ind_of_irr_alts f X)
   (hX : 3 ≤ X.card) (b) (b_in : b ∈ X) :
   has_pivot f X b := 
-have hbot : is_bot b (r₂ b) X, by simp [is_bot, r₂, P, ← pref_order.eq_coe],
+have hbot : is_strictly_worst b (r₂ b) X, by simp [is_strictly_worst, r₂, P, ← pref_order.eq_coe],
 second_step_aux hwp hind hX b_in rfl (λ i, hbot.is_extremal) $
-  is_bot_of_forall_is_bot b_in hwp $ λ i, hbot
+  is_strictly_worst_of_forall_is_strictly_worst b_in hwp $ λ i, hbot
 
 /- Step 3 states that if an individual `is_pivotal` over some alternative `b`, they 
 are also a dictator over every pair of alternatives not equal to `b`. -/
@@ -375,10 +379,10 @@ begin
   rintros a c a_in c_in hab hcb Q ⟨-, h⟩,
   obtain ⟨R, R', i_piv⟩ := i_piv,
   let Q' := λ j, if j = i then makeabove (Q j) a b 
-                 else if is_bot b (R j) X then makebot (Q j) b else maketop (Q j) b,
-  have Q'bot : ∀ j ≠ i, is_bot b (R j) X → Q' j = makebot (Q j) b :=
+                 else if is_strictly_worst b (R j) X then makebot (Q j) b else maketop (Q j) b,
+  have Q'bot : ∀ j ≠ i, is_strictly_worst b (R j) X → Q' j = makebot (Q j) b :=
     λ j hj hbot, by simp only [Q', if_neg hj, if_pos hbot],
-  have Q'top : ∀ j ≠ i, ¬is_bot b (R j) X → Q' j = maketop (Q j) b :=
+  have Q'top : ∀ j ≠ i, ¬is_strictly_worst b (R j) X → Q' j = maketop (Q j) b :=
     λ j hj hbot, by simp only [Q', if_neg hj, if_neg hbot],
   have Q'above : Q' i = makeabove (Q i) a b := by simp [Q'],
   have hQ' : ∀ j, same_order' (Q j) (Q' j) c a c a,
@@ -392,9 +396,9 @@ begin
     ((hind R' Q' b a b_in a_in _).1.1 (i_piv.2.2.2.2.2.2 a a_in hab)); 
       intro j; split; split; intro H; rcases eq_or_ne j i with rfl | hj,
   { convert makeabove_below hcb h },  
-  { convert is_bot_makebot b (Q j) X c c_in hcb,
+  { convert is_strictly_worst_makebot b (Q j) X c c_in hcb,
     apply Q'bot j hj,
-    unfold is_bot,
+    unfold is_strictly_worst,
     by_contra hbot, push_neg at hbot,
     rcases hbot with ⟨d, d_in, hdb, H'⟩,
     cases i_piv.2.1 j with hbot htop,
@@ -402,39 +406,39 @@ begin
     { exact H.2 (htop c c_in hcb).1 } },
   { exact i_piv.2.2.2.1 c c_in hcb }, 
   { by_contra H',
-    apply nP_of_reverseP ((is_top_maketop b (Q j) X) c c_in hcb),
+    apply nP_of_reverseP ((is_strictly_best_maketop b (Q j) X) c c_in hcb),
     rwa ← Q'top j hj,
-    exact not_bot.mpr ⟨c, c_in, hcb, H'⟩ },
+    exact not_strictly_worst.mpr ⟨c, c_in, hcb, H'⟩ },
   { exact absurd (i_piv.2.2.2.1 c c_in hcb).1 H.2 },
-  { convert is_top_maketop b (Q j) X c c_in hcb,
+  { convert is_strictly_best_maketop b (Q j) X c c_in hcb,
     exact Q'top j hj (λ hbot, H.2 (hbot c c_in hcb).1) },
   { apply absurd (makeabove_below hcb h).1,
     convert ← H.2 },
   { by_contra H',
-    apply absurd (is_bot_makebot b (Q j) X c c_in hcb).1,
+    apply absurd (is_strictly_worst_makebot b (Q j) X c c_in hcb).1,
     convert ← H.2,
-    exact Q'bot j hj ((i_piv.2.1 j).is_bot (not_top.mpr ⟨c, c_in, hcb, H'⟩)) }, 
+    exact Q'bot j hj ((i_piv.2.1 j).is_strictly_worst (not_strictly_best.mpr ⟨c, c_in, hcb, H'⟩)) }, 
   { convert makeabove_above (Q j) hab },
-  { convert is_top_maketop b (Q j) X a a_in hab,
+  { convert is_strictly_best_maketop b (Q j) X a a_in hab,
     apply Q'top j hj,
     rw i_piv.1 j hj a b a_in b_in,
-    exact not_bot.mpr ⟨a, a_in, hab, nP_of_reverseP H⟩ },
+    exact not_strictly_worst.mpr ⟨a, a_in, hab, nP_of_reverseP H⟩ },
   { exact i_piv.2.2.2.2.1 a a_in hab },
   { rw ← i_piv.1 j hj a b a_in b_in,
-    refine ((i_piv.2.1 j).is_top (λ hbot, nP_of_reverseP H _)) a a_in hab,
-    convert is_bot_makebot b (Q j) X a a_in hab,
+    refine ((i_piv.2.1 j).is_strictly_best (λ hbot, nP_of_reverseP H _)) a a_in hab,
+    convert is_strictly_worst_makebot b (Q j) X a a_in hab,
     exact Q'bot j hj hbot },
   { exact absurd (i_piv.2.2.2.2.1 a a_in hab).1 H.2 },
-  { convert is_bot_makebot b (Q j) X a a_in hab,
+  { convert is_strictly_worst_makebot b (Q j) X a a_in hab,
     apply Q'bot j hj,
     rw i_piv.1 j hj a b a_in b_in,
-    exact (i_piv.2.2.1 j).is_bot (not_top.mpr ⟨a, a_in, hab, nP_of_reverseP H⟩) },
+    exact (i_piv.2.2.1 j).is_strictly_worst (not_strictly_best.mpr ⟨a, a_in, hab, nP_of_reverseP H⟩) },
   { apply absurd (makeabove_above (Q j) hab).1,
     convert ← H.2 },
   { rw ← i_piv.1 j hj a b a_in b_in,
-    suffices : is_bot b (R j) X, from this a a_in hab,
+    suffices : is_strictly_worst b (R j) X, from this a a_in hab,
     by_contra hbot,
-    apply absurd (is_top_maketop b (Q j) X a a_in hab).1,
+    apply absurd (is_strictly_best_maketop b (Q j) X a a_in hab).1,
     convert ← H.2,
     exact Q'top j hj hbot },
 end
@@ -461,8 +465,8 @@ begin
       refine (htop a ha hab).2 (hdict b a hb ha hbc hac R' _).1,
       rw ← hso j hji a b ha hb,
       by_contra hnot,
-      exact (hdict a b ha hb hac hbc R ((hextr j).is_top
-        (not_bot.mpr ⟨a, ha, hab, hnot⟩) a ha hab)).2 (hbot a ha hab).1 }, 
+      exact (hdict a b ha hb hac hbc R ((hextr j).is_strictly_best
+        (not_strictly_worst.mpr ⟨a, ha, hab, hnot⟩) a ha hab)).2 (hbot a ha hab).1 }, 
     split; apply hdict; assumption },
   refine ⟨i, λ x y hx hy Rᵢ hRᵢ, _⟩,
   rcases eq_or_ne b x with rfl | hbx; rcases eq_or_ne b y with rfl | hby,

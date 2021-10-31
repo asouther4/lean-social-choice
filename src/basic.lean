@@ -58,7 +58,8 @@ structure pref_order (α : Type*) :=
 (total : total rel)
 (trans : transitive rel)
 
-instance (α : Type*) : has_coe_to_fun (pref_order α) := ⟨_, λ r, r.rel⟩
+instance (α : Type*) : has_coe_to_fun (pref_order α) (λ _,  α → α → Prop) := 
+  ⟨ λ r, r.rel⟩
 
 lemma pref_order.eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
 

@@ -45,33 +45,12 @@ lemma forall_exists_trans_gen (R : α → α → Prop) (hR : ∀ a ∈ s, ∃ b 
 
 end relation
 
-end 
+end
 
 open relation finset
 
-/-! ### Definition of a preference ordering -/
-    
-/-- Preference ordering as a structure, used in `arrows_ordinal_prefs`. -/
-structure pref_order (α : Type*) := 
-(rel : α → α → Prop)
-(refl : reflexive rel)
-(total : total rel)
-(trans : transitive rel)
-
-instance (α : Type*) : has_coe_to_fun (pref_order α) (λ _,  α → α → Prop) := 
-  ⟨ λ r, r.rel⟩
-
-lemma pref_order.eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
-
-lemma pref_order.reverse {α : Type*} {r : pref_order α} {a b : α} (h : ¬r a b) : r b a :=
-(r.total a b).resolve_left h
-
 -- We think of social states as type `σ` and inidividuals as type `ι`
 variables {σ ι : Type*} {x y x' y' z a b : σ} {R R' : σ → σ → Prop}
-
-/-- "Old" defintion of a preference ordering, used throughout the rest of this file. -/
-def is_pref_ordering (R : σ → σ → Prop) : Prop :=
-reflexive R ∧ total R ∧ transitive R
 
 /-! ### Basic definitions and properties -/
 
@@ -165,6 +144,17 @@ noncomputable def maximal_set (S : finset σ) (R: σ → σ → Prop) : finset �
 noncomputable def choice_set (S : finset σ) (R: σ → σ → Prop) : finset σ := 
 {x ∈ S | is_best_element x S R}
 
+/- For any finite set of alternatives and for any ordering, 
+   the choice set is a subset of the maximal set. -/
+lemma choice_subset_maximal (S : finset σ) (R : σ → σ → Prop) : 
+  choice_set S R ⊆ maximal_set S R := 
+begin
+  intros a a_in,
+  simp only [choice_set, maximal_set, is_best_element, P,
+    is_maximal_element, sep_def, mem_filter, not_and, not_not] at *,
+  exact ⟨a_in.1, (λ y y_in hy, a_in.2 y y_in)⟩,
+end
+
 lemma cyclical_of_no_highest (R : σ → σ → Prop) {S : finset σ} (hS : S.nonempty) 
   (hR : ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a) :
   ∃ c ∈ S, trans_gen R c c :=
@@ -205,3 +195,108 @@ begin
     obtain ⟨b, b_in, hb⟩ := h a a_in,
     exact ⟨b, b_in, ⟨(htot a b).resolve_left hb, hb⟩⟩ },
 end
+
+/-! ### Some results about quasi-ordering -/
+
+/-- Quasi-ordering as a structure -/
+structure quasi_order (α : Type*) := 
+(rel : α → α → Prop)
+(refl : reflexive rel)
+(trans : transitive rel)
+
+instance (α : Type*) : has_coe_to_fun (quasi_order α) (λ _,  α → α → Prop) := 
+  ⟨ λ r, r.rel⟩
+
+lemma quasi_order.eq_coe {α : Type*} (r : quasi_order α) : r.rel = r := rfl
+
+--lemma maximal_of_finite_quasi_ordered {α : Type*} (r : quasi_order α) (S : finset α) :
+--  ∃ x, is_maximal_element x S r := sorry
+
+/- Suppose `r` is a reflexive relation. Let `x` and `y` be distinct alternatives. 
+   Then `x` is strictly better than `y` if an only if `{x}` is the choice set 
+   of `{x,y}` with respect to `r`. 
+   Sen refers to this as lemma 1*c.  -/
+lemma singleton_choice_set [decidable_eq σ] {r : σ → σ → Prop} 
+  (x y : σ) (not_eq : x ≠ y) (hR : reflexive r) :
+  P r x y ↔ {x} = choice_set {x,y} r :=
+begin -- golfing needed
+  split,
+  { intro h,
+    unfold choice_set,
+    unfold is_best_element,
+    ext, split,
+    { intro a_in,
+      simp only [sep_def, mem_filter, mem_insert, forall_eq_or_imp, 
+        forall_eq, mem_singleton],
+      refine ⟨or.inl (mem_singleton.1 a_in), _⟩,
+      rw mem_singleton.1 a_in,
+      exact ⟨hR x, h.1⟩, },
+    { simp only [and_imp, sep_def, mem_filter, mem_insert, 
+        forall_eq_or_imp, forall_eq, mem_singleton],
+      intro hyp,
+      cases hyp,
+      { intros hax hay,
+        exact hyp, },
+      { rw hyp,
+        intro hyx,
+        exfalso,
+        exact h.2 hyx, }, }, },
+  { intro hyp,
+    split;
+    rw ext_iff at hyp,
+    { have x_in := (hyp x).1 (mem_singleton_self x),
+      simp only [choice_set, is_best_element, sep_def, mem_filter] at x_in,
+      refine x_in.2 y _,
+      simp only [mem_insert],
+      exact or.inr (mem_singleton_self y), }, 
+    { have y_not_in := (not_congr (hyp y)).1
+        (not_mem_singleton.2 (ne_comm.mp not_eq)),
+      simp only [choice_set, is_best_element, sep_def, 
+        mem_filter, not_and, mem_insert] at y_not_in,
+      specialize y_not_in (by right; exact mem_singleton_self y),
+      push_neg at y_not_in,
+      rcases y_not_in with ⟨a, ha₁, ha₂⟩,
+      cases ha₁,
+      { rw ha₁ at ha₂,
+        exact ha₂, },
+      { exfalso,
+        simp only [mem_singleton] at ha₁,
+        rw ha₁ at ha₂,
+        exact ha₂ (hR y), }, }, },
+end
+
+/- Suppose `r` is a quasi-ordering and `S` is a finite set of alternatives.
+   Then if the choice set of `S` is nonempty with respect to `R`,
+   the choice set is equal to the maximal set. 
+   Sen refers to this as lemma 1*d. -/
+lemma choice_eq_maximal_of_quasi {r : quasi_order σ}
+  (S : finset σ) (hS: (choice_set S r).nonempty) : 
+  choice_set S r = maximal_set S r :=
+begin
+  cases hS with x x_in,
+  apply subset.antisymm (choice_subset_maximal S r),
+  intros z z_in,
+  simp only [choice_set, maximal_set, is_best_element, is_maximal_element,
+    sep_def, mem_filter, P, not_and, not_not] at *,
+  refine ⟨z_in.1, λ y y_in, _⟩,
+  exact r.trans (z_in.2 x x_in.1 (x_in.2 z z_in.1)) (x_in.2 y y_in),
+end 
+
+
+
+/-! ### Definition of a preference ordering -/
+    
+/-- Preference ordering as a structure, used extensively in `arrows_theorem`. -/
+structure pref_order (α : Type*) := 
+(rel : α → α → Prop)
+(refl : reflexive rel)
+(total : total rel)
+(trans : transitive rel)
+
+instance (α : Type*) : has_coe_to_fun (pref_order α) (λ _,  α → α → Prop) := 
+  ⟨ λ r, r.rel⟩
+
+lemma pref_order.eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
+
+lemma pref_order.reverse {α : Type*} {r : pref_order α} {a b : α} (h : ¬r a b) : r b a :=
+(r.total a b).resolve_left h

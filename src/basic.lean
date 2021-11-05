@@ -1,4 +1,5 @@
 import data.set.finite
+import tactic
 
 section
 
@@ -144,6 +145,16 @@ noncomputable def maximal_set (S : finset σ) (R: σ → σ → Prop) : finset �
 noncomputable def choice_set (S : finset σ) (R: σ → σ → Prop) : finset σ := 
 {x ∈ S | is_best_element x S R}
 
+lemma is_maximal_of_singleton {R : σ → σ → Prop} (hR : reflexive R )(x : σ) : 
+  is_maximal_element x {x} R :=
+begin
+  intros b b_in,
+  simp only [mem_singleton] at b_in,
+  rw b_in,
+  simp only [P, not_false_iff, and_not_self],
+end
+
+
 /- For any finite set of alternatives and for any ordering, 
    the choice set is a subset of the maximal set. -/
 lemma choice_subset_maximal (S : finset σ) (R : σ → σ → Prop) : 
@@ -209,8 +220,41 @@ instance (α : Type*) : has_coe_to_fun (quasi_order α) (λ _,  α → α → Pr
 
 lemma quasi_order.eq_coe {α : Type*} (r : quasi_order α) : r.rel = r := rfl
 
---lemma maximal_of_finite_quasi_ordered {α : Type*} (r : quasi_order α) (S : finset α) :
---  ∃ x, is_maximal_element x S r := sorry
+
+/- Any nonempty, finite set of alternatives has a maximal element 
+   with respec to a quasi-order `r`. 
+   Sen refers to this as lemma 1*b.  -/
+lemma maximal_of_finite_quasi_ordered {α : Type*} (r : quasi_order α) 
+  (S : finset α) (hS : S.nonempty) :
+  ∃ x, is_maximal_element x S r := -- needs golfing!!!
+begin
+  classical,
+  refine finset.induction_on S _ _ hS, { rintro ⟨_, ⟨⟩⟩ },
+  rintro a s - IH -,
+  by_cases h : s.nonempty,
+  { obtain ⟨x, hx⟩ := IH h,
+    by_cases hP : P r a x,
+    { use a,
+      intros b b_in,
+      by_contra,
+      have b_neq : b ≠ a,
+      { by_contra h_eq,
+        rw h_eq at h,
+        exact h.2 (r.refl a), },
+      exact (hx b (mem_of_mem_insert_of_ne b_in b_neq))
+        (P_trans r.trans h hP), },
+    { use x,
+      intros b b_in,
+      by_cases hb : b = a, { rw hb, exact hP, },
+      have b_in_s : b ∈ s := mem_of_mem_insert_of_ne b_in hb,
+      exact hx b b_in_s, }, },
+  { suffices : {a} = insert a s,
+    { rw ← this,
+      exact ⟨a, is_maximal_of_singleton r.refl a⟩, },
+    simp only [not_nonempty_iff_eq_empty] at h,
+    rw h,
+    refl, },
+end
 
 /- Suppose `r` is a reflexive relation. Let `x` and `y` be distinct alternatives. 
    Then `x` is strictly better than `y` if an only if `{x}` is the choice set 

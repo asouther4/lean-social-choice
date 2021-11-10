@@ -87,6 +87,16 @@ by { cases htot x y with hR hR, exacts [hR, not_and_not_right.mp h hR] }
 lemma nP_of_reverseP (h : P R x y) : ¬P R y x :=
 not_and_not_right.mpr $ λ n, h.1
 
+example (p : Prop) : false → p := false.rec p
+
+lemma nP_of_nR (h : ¬ R x y) : ¬ P R x y := 
+begin
+  simp only [P, not_and, not_not],
+  intro hyp,
+  exact false.rec _ (h hyp),
+end
+
+
 lemma false_of_P_self (h : P R x x) : false := 
 (and_not_self _).mp h
 
@@ -145,6 +155,15 @@ noncomputable def maximal_set (S : finset σ) (R: σ → σ → Prop) : finset �
 noncomputable def choice_set (S : finset σ) (R: σ → σ → Prop) : finset σ := 
 {x ∈ S | is_best_element x S R}
 
+lemma maximal_element_of_maximal_set {r : σ → σ → Prop} {s : finset σ} {x : σ}
+  (h : x ∈ maximal_set s r) : 
+  is_maximal_element x s r := 
+  by simp only [maximal_set, sep_def, mem_filter] at h; exact h.2
+
+lemma maximal_subset (s : finset σ) (r : σ → σ → Prop) : 
+  maximal_set s r ⊆ s := 
+by simp only [maximal_set, sep_def, filter_subset]
+
 lemma is_maximal_of_singleton {R : σ → σ → Prop} (hR : reflexive R )(x : σ) : 
   is_maximal_element x {x} R :=
 begin
@@ -166,7 +185,24 @@ begin
   exact ⟨a_in.1, (λ y y_in hy, a_in.2 y y_in)⟩,
 end
 
-lemma cyclical_of_no_highest (R : σ → σ → Prop) {S : finset σ} (hS : S.nonempty) 
+lemma test_lemma {R : σ → σ → Prop} {S : finset σ} 
+  (hS : S.nonempty) (hR : ∀a ∈ S, ∃b ∈ S, R b a) :
+  ∃ c ∈ S, trans_gen R c c :=
+begin
+  replace hR : ∀a ∈ S, ∃b ∈ S, trans_gen R b a :=
+    λ a ha, let ⟨b, hb, h⟩ := hR a ha in ⟨b, hb, trans_gen.single h⟩,
+  classical, refine finset.induction_on S (by rintro ⟨_, ⟨⟩⟩) _ hS hR,
+  rintro a s - IH - hR,
+  obtain ⟨b, hb', ba⟩ := hR a (by simp),
+  obtain rfl | hb := finset.mem_insert.1 hb', {exact ⟨_, by simp, ba⟩},
+  obtain ⟨c, hc, h⟩ := IH ⟨_, hb⟩ (λ d hd, _), {exact ⟨c, by simp [hc], h⟩},
+  obtain ⟨e, he, ed⟩ := hR d (by simp [hd]),
+  obtain rfl | he := finset.mem_insert.1 he,
+  {exact ⟨_, hb, ba.trans ed⟩}, {exact ⟨_, he, ed⟩}
+end
+
+
+lemma cyclical_of_no_highest {R : σ → σ → Prop} {S : finset σ} (hS : S.nonempty) 
   (hR : ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a) :
   ∃ c ∈ S, trans_gen R c c :=
 begin
@@ -201,7 +237,7 @@ begin
     simp [b_in.1.head hc₂, hx.trans_left hc₁] },
   { by_contra h, 
     suffices : ∃ c ∈ X, trans_gen (P R) c c, from let ⟨c, _, hc⟩ := this in h_acyc c hc,
-    refine cyclical_of_no_highest (P R) X_ne (forall_exists_trans_gen _ (λ a a_in, _)),
+    refine cyclical_of_no_highest X_ne (forall_exists_trans_gen _ (λ a a_in, _)),
     simp only [is_best_element, not_exists, not_forall] at h,
     obtain ⟨b, b_in, hb⟩ := h a a_in,
     exact ⟨b, b_in, ⟨(htot a b).resolve_left hb, hb⟩⟩ },
@@ -226,7 +262,7 @@ lemma quasi_order.eq_coe {α : Type*} (r : quasi_order α) : r.rel = r := rfl
    Sen refers to this as lemma 1*b.  -/
 lemma maximal_of_finite_quasi_ordered {α : Type*} (r : quasi_order α) 
   (S : finset α) (hS : S.nonempty) :
-  ∃ x, is_maximal_element x S r := -- needs golfing!!!
+  ∃ x ∈ S, is_maximal_element x S r := -- needs golfing!!!
 begin
   classical,
   refine finset.induction_on S _ _ hS, { rintro ⟨_, ⟨⟩⟩ },
@@ -235,26 +271,42 @@ begin
   { obtain ⟨x, hx⟩ := IH h,
     by_cases hP : P r a x,
     { use a,
+      refine ⟨by simp only [mem_insert, true_or, eq_self_iff_true], _⟩,
       intros b b_in,
       by_contra,
       have b_neq : b ≠ a,
       { by_contra h_eq,
         rw h_eq at h,
         exact h.2 (r.refl a), },
+      cases hx with x_in hx,
       exact (hx b (mem_of_mem_insert_of_ne b_in b_neq))
         (P_trans r.trans h hP), },
     { use x,
+      cases hx with x_in hx,
+      refine ⟨mem_insert_of_mem x_in, _⟩,
       intros b b_in,
       by_cases hb : b = a, { rw hb, exact hP, },
       have b_in_s : b ∈ s := mem_of_mem_insert_of_ne b_in hb,
       exact hx b b_in_s, }, },
   { suffices : {a} = insert a s,
     { rw ← this,
-      exact ⟨a, is_maximal_of_singleton r.refl a⟩, },
+      exact ⟨a, mem_singleton_self a, is_maximal_of_singleton r.refl a⟩, },
     simp only [not_nonempty_iff_eq_empty] at h,
     rw h,
     refl, },
 end
+
+lemma choice_set_of_singleton {r : σ → σ → Prop} (hr: reflexive r) (x : σ) :
+  choice_set {x} r = {x} := 
+begin
+  ext,
+  simp only [choice_set, is_best_element, 
+    sep_def, mem_filter, forall_eq, and_iff_left_iff_imp, mem_singleton],
+  intro hyp,
+  rw hyp,
+  exact hr x,
+end
+
 
 /- Suppose `r` is a reflexive relation. Let `x` and `y` be distinct alternatives. 
    Then `x` is strictly better than `y` if an only if `{x}` is the choice set 
@@ -326,7 +378,225 @@ begin
   exact r.trans (z_in.2 x x_in.1 (x_in.2 z z_in.1)) (x_in.2 y y_in),
 end 
 
+lemma is_maximal_insert_of_nP [decidable_eq σ] 
+  {r : σ → σ → Prop} {b x : σ} {s : finset σ}
+  (b_not_in : b ∉ s) (hb : ¬ P r b x) :
+  x ∈ maximal_set s r → x ∈ maximal_set (insert b s) r :=
+begin
+  intro x_in,
+  simp only [maximal_set, sep_def, mem_filter, mem_insert] at *, 
+  refine ⟨or.inr x_in.1, _⟩,
+  intros a a_in,
+  cases (mem_insert.1 a_in),
+  { rw h,
+    exact hb },
+  { exact x_in.2 a h, },
+end
 
+lemma maximal_of_insert_not_maximal [decidable_eq σ] 
+  {r : σ → σ → Prop} {b : σ} {s : finset σ}
+  (hr : transitive r) (b_not_in : b ∉ s) (hb : b ∉ maximal_set (insert b s) r):
+  maximal_set s r = maximal_set (insert b s) r := 
+begin
+  have : ∃ c ∈ s, P r c b,
+    { simp only [maximal_set, is_maximal_element, true_and, 
+        sep_def, exists_prop, mem_filter, mem_insert, forall_eq_or_imp, not_and,
+        not_not, true_or, eq_self_iff_true, not_forall] at hb,
+      have foo : ¬ P r b b,
+      { by_contra h,
+        exact h.2 h.1, },
+      rcases hb foo with ⟨c, c_in, hc⟩,
+      exact ⟨c, c_in, hc⟩, },
+  rcases this with ⟨c, c_in, hc⟩,
+  ext,
+  simp only [maximal_set, is_maximal_element, sep_def, mem_filter, 
+    mem_insert, forall_eq_or_imp],
+  split,
+  { intro ha,
+    refine ⟨or.inr ha.1, _, ha.2⟩,
+    by_contra,
+    exact (ha.2 c c_in) (P_trans hr hc h), },
+  { intro hyp,
+    rcases hyp with ⟨a_in, hba, ha⟩,
+    have h_neq : ¬ a = b,
+    { by_contra h_eq,
+      rw ← h_eq at hc,
+      exact (ha c c_in) hc, }, 
+    exact ⟨a_in.resolve_left h_neq, ha⟩, },
+end
+
+lemma exists_maximal_of_quasi [decidable_eq σ] 
+  {a : σ} {S : finset σ} (r : quasi_order σ) (a_in : a ∈ S) : 
+  ∃ b ∈ maximal_set S r, r b a := 
+begin
+  by_cases ha : a ∈ maximal_set S r, { exact ⟨a, ha, r.refl a⟩, },
+  by_contra hb,
+  push_neg at hb,
+  have : ∀ c ∈ {x ∈ S | r x a ∧ x ∉ maximal_set S r}, 
+    ∃ d ∈ {x ∈ S | r x a ∧ x ∉ maximal_set S r}, P r d c,
+  { intros c c_in,
+    simp only [maximal_set, is_maximal_element, 
+      sep_def, exists_prop, mem_filter, not_and, not_not, not_forall] at c_in,
+    obtain ⟨d, d_in, hdc⟩ := c_in.2.2 c_in.1,
+    refine ⟨d, _, hdc⟩,
+    simp only [sep_def, mem_filter],
+    refine ⟨d_in, r.trans hdc.1 c_in.2.1, _ ⟩,
+    by_contra hyp,
+    exact (hb d hyp) (r.trans hdc.1 c_in.2.1), },
+  have hy : ∃ y ∈ {x ∈ S | r x a ∧ x ∉ maximal_set S r}, trans_gen (P r) y y,
+  { replace this : ∀ c ∈ {x ∈ S | r x a ∧ x ∉ maximal_set S r}, 
+      ∃ d ∈ {x ∈ S | r x a ∧ x ∉ maximal_set S r}, trans_gen (P r) d c:=
+    λ a ha, let ⟨b, hb, h⟩ := this a ha in ⟨b, hb, trans_gen.single h⟩,
+    refine cyclical_of_no_highest _ this,
+    use a,
+    simp only [sep_def, mem_filter],
+    exact ⟨a_in, r.refl a, ha⟩, },
+  rcases hy with ⟨y, y_in, hy⟩,
+  have hP : transitive (P r) := λ x₁ x₂ x₃ h₁ h₂, (P_trans r.trans h₁ h₂),
+  rw (trans_gen.trans_gen_eq_self hP) at hy,
+  exact false_of_P_self hy,
+end
+
+
+/- Lemma 1*e according to Sen -/
+lemma maximal_indiff_iff_choice_eq_maximal (r : quasi_order σ)
+  (S : finset σ) (hS : S.nonempty) : 
+  (∀ x y ∈ maximal_set S r, I r x y) ↔ choice_set S r = maximal_set S r :=
+begin
+  classical,
+  split,
+  { refine finset.induction_on S _ _,
+    { intro h,
+      ext, split, -- finish should work for both of these goals
+      { sorry, },
+      { sorry, }, },
+    { intros a s a_not_in IH h,
+      by_contra sets_neq,
+      have choice_empty : choice_set (insert a s) r = ∅,
+      { by_contra,
+        have sets_eq := choice_eq_maximal_of_quasi (insert a s) (nonempty_of_ne_empty h),
+        exact sets_neq sets_eq }, 
+      by_cases ha : a ∈ maximal_set (insert a s) r,
+      { have h_insert : maximal_set (insert a s) r = insert a (maximal_set s r),
+        { ext y,
+          split,
+          { simp only [maximal_set, is_maximal_element, 
+              sep_def, mem_filter, mem_insert, forall_eq_or_imp],
+            intro hyp,
+            cases hyp.1 with y_eq y_in, 
+            left, exact y_eq,
+            right, exact ⟨y_in, hyp.2.2⟩, },
+          { intro hyp,
+            by_cases y_eq : y = a,
+            { simp only [maximal_set, is_maximal_element, 
+                sep_def, mem_filter, mem_insert, forall_eq_or_imp],
+              refine ⟨or.inl y_eq, _ ⟩,
+              rw y_eq,
+              simp only [maximal_set, is_maximal_element, 
+                true_and, sep_def, mem_filter, mem_insert, forall_eq_or_imp, true_or,
+                eq_self_iff_true] at ha,
+              exact ha, },
+            { simp only [maximal_set, sep_def, mem_filter, mem_insert],
+              have y_in : y ∈ maximal_set s r := (mem_insert.1 hyp).resolve_left y_eq,
+              split, right, exact (maximal_subset s r y_in),
+              intros z z_in,
+              cases (mem_insert.1 z_in) with hz hz,
+              { rw hz,
+                by_contra hay,
+                by_cases h_all : ∀ b ∈ maximal_set s r, P r a b,
+                { suffices : a ∈ choice_set (insert a s) r, -- finish handles the following sorry
+                  { sorry, },
+                  simp only [choice_set, is_best_element, 
+                    true_and, sep_def, mem_filter, mem_insert,
+                     forall_eq_or_imp, true_or, eq_self_iff_true],
+                  refine ⟨r.refl a, λ b b_in, _ ⟩,
+                  obtain ⟨c, c_in, hcb⟩ := exists_maximal_of_quasi r b_in,
+                  exact r.trans (h_all c c_in).1 hcb, },
+                { push_neg at h_all,
+                  rcases h_all with ⟨b, b_in, hb⟩,
+                  have b_in' := is_maximal_insert_of_nP a_not_in hb b_in,
+                  have foo := I_trans_P r.trans (h b a b_in' ha) hay,
+                  exact ((maximal_element_of_maximal_set y_in) b (maximal_subset s r b_in)) foo, }, }, 
+              { exact (maximal_element_of_maximal_set y_in) z hz, }, }, }, },
+        have IH_assumption : ∀ x y ∈ maximal_set s r, I r x y,
+        { rw h_insert at h,
+          intros x y x_in y_in,
+          exact h x y ((subset_insert a _ ) x_in) ((subset_insert a _) y_in), },
+        have h_empty' : choice_set s r = ∅,
+        { by_contra ne_empty,
+          obtain ⟨y, hy⟩:= nonempty_of_ne_empty ne_empty,
+          have hya : r y a,
+          { rw h_insert at h,
+            refine (h y a (mem_insert_of_mem _) (mem_insert_self a (maximal_set s r))).1,
+            exact choice_subset_maximal s r hy, },
+          have y_in' : y ∈ choice_set (insert a s) r,
+          { simp only [choice_set, is_best_element,
+              sep_def, mem_filter, mem_insert, forall_eq_or_imp],
+            simp only [choice_set, sep_def, mem_filter] at hy,
+            exact ⟨or.inr hy.1, hya, hy.2⟩, }, -- finish handles the next sorry,
+          sorry },
+          /-ext y,
+          simp only [choice_set, is_best_element, sep_def, 
+            exists_prop, mem_filter, not_and, iff_false, not_forall, not_mem_empty],
+          simp only [ext_iff, choice_set, is_best_element, sep_def, exists_prop, mem_filter, mem_insert, forall_eq_or_imp, not_and,
+            iff_false, not_forall, not_mem_empty] at choice_empty,
+          --obtain ⟨
+          intro y_in,
+          by_cases hy : r y a,
+          { sorry, },
+          { exact ⟨a, y_in, hy⟩, },  -/
+        rw IH IH_assumption at h_empty',
+        rw h_empty' at h_insert,
+        by_cases s_empty : s = ∅,
+        { rw [s_empty, insert_emptyc_eq, ←r.eq_coe, 
+            (choice_set_of_singleton r.refl a)] at choice_empty, -- finish fills in the next line
+          sorry, },
+        { have := (nonempty_of_ne_empty s_empty),
+          have := maximal_of_finite_quasi_ordered r s this,
+          suffices : (maximal_set s r).nonempty,
+          { finish, },
+          simp only [maximal_set],
+          have bla := maximal_of_finite_quasi_ordered r s (nonempty_of_ne_empty s_empty),
+          rcases bla with ⟨x, x_in, hx⟩,
+          use x,
+          simp only [sep_def, mem_filter],
+          exact ⟨x_in, hx⟩, },
+       },
+      { rw [← r.eq_coe, maximal_of_insert_not_maximal r.trans a_not_in ha, 
+          r.eq_coe] at IH,
+        specialize IH h,
+        have choice_eq : choice_set s r = choice_set (insert a s) r,
+        { ext c,
+          simp only [choice_set, is_best_element, sep_def, 
+            mem_filter, mem_insert, forall_eq_or_imp], 
+          have : ∃ x ∈ s, P r x a,
+          { simp only [maximal_set, is_maximal_element, true_and, 
+              sep_def, exists_prop, mem_filter, mem_insert, forall_eq_or_imp, not_and,
+              not_not, true_or, eq_self_iff_true, not_forall] at ha,
+            have foo : ¬ P r a a,
+            { by_contra h,
+            exact h.2 h.1, },
+            rcases ha foo with ⟨x, x_in, hx⟩,
+            exact ⟨x, x_in, hx⟩, },
+          rcases this with ⟨x, x_in, hx⟩,
+          split,
+          { intro hc,
+            refine ⟨or.inr hc.1, _ , hc.2⟩,
+            exact r.trans (hc.2 x x_in) hx.1, },
+          { intro hc,
+            have h_neq : ¬ c = a,
+            { by_contra,
+              rw h at hc,
+              exact hx.2 (hc.2.2 x x_in), },
+              exact ⟨hc.1.resolve_left h_neq, hc.2.2⟩, }, },
+        rw choice_eq at IH,
+        exact sets_neq IH, }, },   },
+  { intro hyp,
+    rw ← hyp,
+    intros x y x_in y_in,
+    simp only [choice_set, sep_def, mem_filter] at *,
+    exact ⟨x_in.2 y y_in.1, y_in.2 x x_in.1⟩, },
+end
 
 /-! ### Definition of a preference ordering -/
     

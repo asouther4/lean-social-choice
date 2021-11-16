@@ -160,6 +160,11 @@ lemma maximal_element_of_maximal_set {r : σ → σ → Prop} {s : finset σ} {x
   is_maximal_element x s r := 
   by simp only [maximal_set, sep_def, mem_filter] at h; exact h.2
 
+lemma maximal_set_of_maximal_element {r: σ → σ → Prop} {s : finset σ} {x : σ}
+  (x_in : x ∈ s) (h : is_maximal_element x s r) : 
+  x ∈ maximal_set s r := by simp only [maximal_set, sep_def, mem_filter]; exact ⟨x_in, h⟩ 
+
+
 lemma maximal_subset (s : finset σ) (r : σ → σ → Prop) : 
   maximal_set s r ⊆ s := 
 by simp only [maximal_set, sep_def, filter_subset]
@@ -173,6 +178,15 @@ begin
   simp only [P, not_false_iff, and_not_self],
 end
 
+lemma maximal_eq_empty_of_empty (R : σ → σ → Prop) :
+  maximal_set ∅ R = ∅ := 
+by simp only [maximal_set, sep_def, forall_false_left, 
+  filter_true_of_mem, implies_true_iff, not_mem_empty]
+
+lemma choice_eq_empty_of_empty (R : σ → σ → Prop) :
+  choice_set ∅ R = ∅ := 
+by simp only [choice_set, sep_def, forall_false_left, 
+  filter_true_of_mem, implies_true_iff, not_mem_empty]
 
 /- For any finite set of alternatives and for any ordering, 
    the choice set is a subset of the maximal set. -/
@@ -219,6 +233,8 @@ begin
       { exact ⟨_, hb, ba.trans ed⟩ }, 
       { exact ⟨_, he, ed⟩ } } },
 end
+
+lemma unknown_name {R : σ → σ → Prop} {S : finset σ} (hS : )
 
 /- Sen's Theorem on the existence of a choice function, from 
   *Social Choice and Collective Welfare* (1970). 
@@ -453,10 +469,61 @@ begin
     exact ⟨a_in, r.refl a, ha⟩, },
   rcases hy with ⟨y, y_in, hy⟩,
   have hP : transitive (P r) := λ x₁ x₂ x₃ h₁ h₂, (P_trans r.trans h₁ h₂),
-  rw (trans_gen.trans_gen_eq_self hP) at hy,
+  rw (trans_gen_eq_self hP) at hy,
   exact false_of_P_self hy,
 end
 
+/- Lemma 1*e according to Sen -/
+lemma maximal_indiff_iff_choice_eq_maximal' (r : quasi_order σ)
+  (S : finset σ) (hS : S.nonempty) : 
+  (∀ x y ∈ maximal_set S r, I r x y) ↔ choice_set S r = maximal_set S r :=
+begin
+  classical,
+  split,
+  { intro hyp,
+    by_contra sets_neq,
+    have choice_empty : choice_set S r = ∅,
+      { by_contra,
+        have sets_eq := choice_eq_maximal_of_quasi S (nonempty_of_ne_empty h),
+        exact sets_neq sets_eq }, 
+  obtain ⟨x₀, x₀_in, hx₀⟩ := maximal_of_finite_quasi_ordered r S hS,
+  have x₀_not_in : x₀ ∉ choice_set S r := by rw choice_empty; exact not_mem_empty x₀,
+  simp only [choice_set, is_best_element, sep_def,
+   exists_prop, mem_filter, not_and, not_forall] at x₀_not_in,
+  obtain ⟨x₁, x₁_in, hx₁⟩ := x₀_not_in x₀_in,
+  have x₁_not_in : x₁ ∉ maximal_set S r,
+  { by_contra x₁_in_max,
+    refine hx₁ (hyp x₀ x₁ _ x₁_in_max).1,
+    simp only [maximal_set, sep_def, mem_filter],
+    exact ⟨x₀_in, hx₀⟩,},
+  have h_no_max : ¬ (∃ x ∈ {z ∈ S | P r z x₁ ∧ z ∉ maximal_set S r }, 
+    is_maximal_element x {z ∈ S | P r z x₁ ∧ z ∉ maximal_set S r } r),
+  { unfold is_maximal_element,
+    push_neg,
+    intros x x_in,
+    simp only [maximal_set, is_maximal_element, sep_def, 
+      mem_filter, not_and, exists_prop, not_not, not_forall] at x_in,
+    simp only [sep_def, exists_prop, mem_filter],
+    obtain ⟨y, y_in, hy⟩ := (x_in.2.2 x_in.1),
+    refine ⟨y, ⟨y_in, (P_trans r.trans hy x_in.2.1),_⟩, hy⟩,
+    by_contra y_max, apply hx₁,
+    exact (I_trans_P r.trans (hyp x₀ y (maximal_set_of_maximal_element x₀_in hx₀) y_max) 
+      (P_trans r.trans hy x_in.2.1)).1, },
+  refine h_no_max (maximal_of_finite_quasi_ordered r {z ∈ S | P r z x₁ ∧ z ∉ maximal_set S r } _),
+  simp only [maximal_set, is_maximal_element, sep_def, 
+    exists_prop, mem_filter, not_and, not_not, not_forall] at x₁_not_in,
+  obtain ⟨x₂, x₂_in, hx₂⟩ := x₁_not_in x₁_in,
+  use x₂,
+  simp only [sep_def, mem_filter],
+  refine ⟨x₂_in, hx₂, _⟩,
+  by_contra x₂_in_max, apply hx₁,
+  refine r.trans (hyp x₀ x₂ (maximal_set_of_maximal_element x₀_in hx₀) x₂_in_max).1 hx₂.1, }, 
+  { intro hyp,
+    rw ← hyp,
+    intros x y x_in y_in,
+    simp only [choice_set, sep_def, mem_filter] at *,
+    exact ⟨x_in.2 y y_in.1, y_in.2 x x_in.1⟩, },
+end
 
 /- Lemma 1*e according to Sen -/
 lemma maximal_indiff_iff_choice_eq_maximal (r : quasi_order σ)
@@ -467,9 +534,7 @@ begin
   split,
   { refine finset.induction_on S _ _,
     { intro h,
-      ext, split, -- finish should work for both of these goals
-      { sorry, },
-      { sorry, }, },
+      rw [maximal_eq_empty_of_empty r, choice_eq_empty_of_empty r] },
     { intros a s a_not_in IH h,
       by_contra sets_neq,
       have choice_empty : choice_set (insert a s) r = ∅,
@@ -535,16 +600,6 @@ begin
             simp only [choice_set, sep_def, mem_filter] at hy,
             exact ⟨or.inr hy.1, hya, hy.2⟩, }, -- finish handles the next sorry,
           sorry },
-          /-ext y,
-          simp only [choice_set, is_best_element, sep_def, 
-            exists_prop, mem_filter, not_and, iff_false, not_forall, not_mem_empty],
-          simp only [ext_iff, choice_set, is_best_element, sep_def, exists_prop, mem_filter, mem_insert, forall_eq_or_imp, not_and,
-            iff_false, not_forall, not_mem_empty] at choice_empty,
-          --obtain ⟨
-          intro y_in,
-          by_cases hy : r y a,
-          { sorry, },
-          { exact ⟨a, y_in, hy⟩, },  -/
         rw IH IH_assumption at h_empty',
         rw h_empty' at h_insert,
         by_cases s_empty : s = ∅,
@@ -560,8 +615,7 @@ begin
           rcases bla with ⟨x, x_in, hx⟩,
           use x,
           simp only [sep_def, mem_filter],
-          exact ⟨x_in, hx⟩, },
-       },
+          exact ⟨x_in, hx⟩, }, },
       { rw [← r.eq_coe, maximal_of_insert_not_maximal r.trans a_not_in ha, 
           r.eq_coe] at IH,
         specialize IH h,

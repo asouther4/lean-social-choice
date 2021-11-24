@@ -78,16 +78,11 @@ lemma I_trans_P (htrans : transitive R) (h1 : I R x y) (h2 : P R y z) : P R x z 
 lemma P_trans (htrans : transitive R) (h1 : P R x y) (h2 : P R y z) : P R x z :=
 ⟨htrans h1.1 h2.1, λ h, h2.2 (htrans h h1.1)⟩
 
-def acyclical (R : σ → σ → Prop) : Prop := 
-∀ x : σ, ¬trans_gen (P R) x x
-
 lemma R_of_nP_total (htot : total R) (h : ¬P R y x) : R x y :=
 by { cases htot x y with hR hR, exacts [hR, not_and_not_right.mp h hR] }
 
 lemma nP_of_reverseP (h : P R x y) : ¬P R y x :=
 not_and_not_right.mpr $ λ n, h.1
-
-example (p : Prop) : false → p := false.rec p
 
 lemma nP_of_nR (h : ¬ R x y) : ¬ P R x y := 
 begin
@@ -95,7 +90,6 @@ begin
   intro hyp,
   exact false.rec _ (h hyp),
 end
-
 
 lemma false_of_P_self (h : P R x x) : false := 
 (and_not_self _).mp h
@@ -164,7 +158,6 @@ lemma maximal_set_of_maximal_element {r: σ → σ → Prop} {s : finset σ} {x 
   (x_in : x ∈ s) (h : is_maximal_element x s r) : 
   x ∈ maximal_set s r := by simp only [maximal_set, sep_def, mem_filter]; exact ⟨x_in, h⟩ 
 
-
 lemma maximal_subset (s : finset σ) (r : σ → σ → Prop) : 
   maximal_set s r ⊆ s := 
 by simp only [maximal_set, sep_def, filter_subset]
@@ -199,64 +192,6 @@ begin
   exact ⟨a_in.1, (λ y y_in hy, a_in.2 y y_in)⟩,
 end
 
-lemma test_lemma {R : σ → σ → Prop} {S : finset σ} 
-  (hS : S.nonempty) (hR : ∀a ∈ S, ∃b ∈ S, R b a) :
-  ∃ c ∈ S, trans_gen R c c :=
-begin
-  replace hR : ∀a ∈ S, ∃b ∈ S, trans_gen R b a :=
-    λ a ha, let ⟨b, hb, h⟩ := hR a ha in ⟨b, hb, trans_gen.single h⟩,
-  classical, refine finset.induction_on S (by rintro ⟨_, ⟨⟩⟩) _ hS hR,
-  rintro a s - IH - hR,
-  obtain ⟨b, hb', ba⟩ := hR a (by simp),
-  obtain rfl | hb := finset.mem_insert.1 hb', {exact ⟨_, by simp, ba⟩},
-  obtain ⟨c, hc, h⟩ := IH ⟨_, hb⟩ (λ d hd, _), {exact ⟨c, by simp [hc], h⟩},
-  obtain ⟨e, he, ed⟩ := hR d (by simp [hd]),
-  obtain rfl | he := finset.mem_insert.1 he,
-  {exact ⟨_, hb, ba.trans ed⟩}, {exact ⟨_, he, ed⟩}
-end
-
-
-lemma cyclical_of_no_highest {R : σ → σ → Prop} {S : finset σ} (hS : S.nonempty) 
-  (hR : ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a) :
-  ∃ c ∈ S, trans_gen R c c :=
-begin
-  classical,
-  refine finset.induction_on S _ _ hS hR, { rintro ⟨_, ⟨⟩⟩ },
-  rintro a s - IH - hR',
-  obtain ⟨b, hb', ba⟩ := hR' a (mem_insert_self a s),
-  obtain rfl | hb := mem_insert.1 hb', 
-  { exact ⟨_, mem_insert_self b s, ba⟩ },
-  { obtain ⟨c, hc, h⟩ := IH ⟨_, hb⟩ (λ d hd, _), 
-    { exact ⟨c, mem_insert_of_mem hc, h⟩ },
-    { obtain ⟨e, he, ed⟩ := hR' d (mem_insert_of_mem hd),
-      obtain rfl | he := mem_insert.1 he,
-      { exact ⟨_, hb, ba.trans ed⟩ }, 
-      { exact ⟨_, he, ed⟩ } } },
-end
-
-/- Sen's Theorem on the existence of a choice function, from 
-  *Social Choice and Collective Welfare* (1970). 
-
-  If a relation is reflexive and total, then acyclicality is a necessary 
-  and sufficient condition for a choice function to be defined on every finset `X`. -/
-theorem best_elem_iff_acyclical [fintype σ] 
-  (htot : total R) : 
-  (∀ X : finset σ, X.nonempty → ∃ b ∈ X, is_best_element b X R) ↔ acyclical R := 
-begin
-  refine ⟨λ h x hx, _, λ h_acyc X X_ne, _⟩,
-  { obtain ⟨b, b_in, hb⟩ := h {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a} ⟨x, by simpa⟩, -- can we maybe pull this sort of thing out into its own general lemma?
-    simp only [true_and, sep_def, mem_filter, mem_univ] at b_in,
-    obtain ⟨c, hc₁, hc₂⟩ := trans_gen.tail'_iff.mp b_in.2,
-    refine hc₂.2 (hb c _),
-    simp [b_in.1.head hc₂, hx.trans_left hc₁] },
-  { by_contra h, 
-    suffices : ∃ c ∈ X, trans_gen (P R) c c, from let ⟨c, _, hc⟩ := this in h_acyc c hc,
-    refine cyclical_of_no_highest X_ne (forall_exists_trans_gen _ (λ a a_in, _)),
-    simp only [is_best_element, not_exists, not_forall] at h,
-    obtain ⟨b, b_in, hb⟩ := h a a_in,
-    exact ⟨b, b_in, ⟨(htot a b).resolve_left hb, hb⟩⟩ },
-end
-
 /-! ### Some results about quasi-ordering -/
 
 /-- Quasi-ordering as a structure -/
@@ -269,7 +204,6 @@ instance (α : Type*) : has_coe_to_fun (quasi_order α) (λ _,  α → α → Pr
   ⟨ λ r, r.rel⟩
 
 lemma quasi_order.eq_coe {α : Type*} (r : quasi_order α) : r.rel = r := rfl
-
 
 /- Any nonempty, finite set of alternatives has a maximal element 
    with respec to a quasi-order `r`. 
@@ -310,6 +244,7 @@ begin
     refl, },
 end
 
+/- UNDECIDED: this is not used in latest draft -/
 lemma choice_set_of_singleton {r : σ → σ → Prop} (hr: reflexive r) (x : σ) :
   choice_set {x} r = {x} := 
 begin
@@ -320,7 +255,6 @@ begin
   rw hyp,
   exact hr x,
 end
-
 
 /- Suppose `r` is a reflexive relation. Let `x` and `y` be distinct alternatives. 
    Then `x` is strictly better than `y` if an only if `{x}` is the choice set 
@@ -392,6 +326,8 @@ begin
   exact r.trans (z_in.2 x x_in.1 (x_in.2 z z_in.1)) (x_in.2 y y_in),
 end 
 
+/-
+UNDECIDED IF THIS LEMMA IS WORTH KEEPING IF NOT USED IN LATEST DRAFT OF 1*e
 lemma is_maximal_insert_of_nP [decidable_eq σ] 
   {r : σ → σ → Prop} {b x : σ} {s : finset σ}
   (b_not_in : b ∉ s) (hb : ¬ P r b x) :
@@ -407,6 +343,7 @@ begin
   { exact x_in.2 a h, },
 end
 
+UNDECIDED IF THIS LEMMA IS WORTH KEEPING IF NOT USED IN LATEST DRAFT OF 1*e
 lemma maximal_of_insert_not_maximal [decidable_eq σ] 
   {r : σ → σ → Prop} {b : σ} {s : finset σ}
   (hr : transitive r) (b_not_in : b ∉ s) (hb : b ∉ maximal_set (insert b s) r):
@@ -439,6 +376,7 @@ begin
     exact ⟨a_in.resolve_left h_neq, ha⟩, },
 end
 
+ UNDECIDED IF THIS LEMMA IS WORTH KEEPING IF NOT USED IN LATEST DRAFT OF 1*e
 lemma exists_maximal_of_quasi [decidable_eq σ] 
   {a : σ} {S : finset σ} (r : quasi_order σ) (a_in : a ∈ S) : 
   ∃ b ∈ maximal_set S r, r b a := 
@@ -470,6 +408,7 @@ begin
   rw (trans_gen_eq_self hP) at hy,
   exact false_of_P_self hy,
 end
+-/ 
 
 /- Lemma 1*e according to Sen -/
 lemma maximal_indiff_iff_choice_eq_maximal' (r : quasi_order σ)
@@ -536,3 +475,67 @@ lemma pref_order.eq_coe {α : Type*} (r : pref_order α) : r.rel = r := rfl
 
 lemma pref_order.reverse {α : Type*} {r : pref_order α} {a b : α} (h : ¬r a b) : r b a :=
 (r.total a b).resolve_left h
+
+/-! ### Subrelations and Compatibility -/
+
+def is_subrelation (Q₁ Q₂ : quasi_order σ) : Prop := ∀ x y : σ, 
+  (Q₁ x y → Q₂ x y) ∧ ((Q₁ x y ∧ ¬ Q₁ y x) → ¬ Q₂ y x)
+
+def is_compatible (Q : quasi_order σ) (R : pref_order σ): Prop := ∀ x y : σ, 
+  (Q x y → R x y) ∧ ((Q x y ∧ ¬ Q y x) → ¬ R y x)
+
+/- 
+For every quasi_order, there exists a compatible preference order. 
+Lemma 1*f according to Sen. 
+-/
+lemma compatible_pref_order_of_quasi (Q : quasi_order σ) : 
+  ∃ R : pref_order σ, is_compatible Q R :=
+begin
+  sorry, 
+end
+
+
+/-! ### Quasitransitivity and Acyclicality -/
+
+def acyclical (R : σ → σ → Prop) : Prop := 
+∀ x : σ, ¬trans_gen (P R) x x
+
+lemma cyclical_of_no_highest {R : σ → σ → Prop} {S : finset σ} (hS : S.nonempty) 
+  (hR : ∀ a ∈ S, ∃ b ∈ S, trans_gen R b a) :
+  ∃ c ∈ S, trans_gen R c c :=
+begin
+  classical,
+  refine finset.induction_on S _ _ hS hR, { rintro ⟨_, ⟨⟩⟩ },
+  rintro a s - IH - hR',
+  obtain ⟨b, hb', ba⟩ := hR' a (mem_insert_self a s),
+  obtain rfl | hb := mem_insert.1 hb', 
+  { exact ⟨_, mem_insert_self b s, ba⟩ },
+  { obtain ⟨c, hc, h⟩ := IH ⟨_, hb⟩ (λ d hd, _), 
+    { exact ⟨c, mem_insert_of_mem hc, h⟩ },
+    { obtain ⟨e, he, ed⟩ := hR' d (mem_insert_of_mem hd),
+      obtain rfl | he := mem_insert.1 he,
+      { exact ⟨_, hb, ba.trans ed⟩ }, 
+      { exact ⟨_, he, ed⟩ } } },
+end
+
+/- Sen's Theorem on the existence of a choice function, referred to as lemma 1*l.
+
+  If a relation is reflexive and total, then acyclicality is a necessary 
+  and sufficient condition for a choice function to be defined on every finset `X`. -/
+theorem best_elem_iff_acyclical [fintype σ] 
+  (htot : total R) : 
+  (∀ X : finset σ, X.nonempty → ∃ b ∈ X, is_best_element b X R) ↔ acyclical R := 
+begin
+  refine ⟨λ h x hx, _, λ h_acyc X X_ne, _⟩,
+  { obtain ⟨b, b_in, hb⟩ := h {a ∈ univ | trans_gen (P R) a x ∧ trans_gen (P R) x a} ⟨x, by simpa⟩, -- can we maybe pull this sort of thing out into its own general lemma?
+    simp only [true_and, sep_def, mem_filter, mem_univ] at b_in,
+    obtain ⟨c, hc₁, hc₂⟩ := trans_gen.tail'_iff.mp b_in.2,
+    refine hc₂.2 (hb c _),
+    simp [b_in.1.head hc₂, hx.trans_left hc₁] },
+  { by_contra h, 
+    suffices : ∃ c ∈ X, trans_gen (P R) c c, from let ⟨c, _, hc⟩ := this in h_acyc c hc,
+    refine cyclical_of_no_highest X_ne (forall_exists_trans_gen _ (λ a a_in, _)),
+    simp only [is_best_element, not_exists, not_forall] at h,
+    obtain ⟨b, b_in, hb⟩ := h a a_in,
+    exact ⟨b, b_in, ⟨(htot a b).resolve_left hb, hb⟩⟩ },
+end

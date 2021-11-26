@@ -40,7 +40,7 @@ let
           (by omega)
     else false,
   viable : finset (χ × χ) := (cands.product cands).filter 
-      (λ p, /-p.2 ∈ cands ∧ -/ still_wins p.1 p.2 )
+      (λ p, still_wins p.1 p.2 )
 in finset.image prod.fst $ viable.filter (λ p, (margin voters Q p.1 p.2 = best_margin voters viable Q))
 
 def simple_stable_voting {χ υ : Type*} (prof : election_profile χ υ)
@@ -58,7 +58,8 @@ lemma exists_best_margin {χ υ : Type*} {s : finset (χ × χ)} (voters : finse
 begin
   unfold best_margin,
   simp only [hs, dif_pos],
-  obtain ⟨b, b_in, hb⟩ := finset.exists_mem_eq_sup' hs (λ (p : χ × χ), margin voters Q p.fst p.snd),
+  obtain ⟨b, b_in, hb⟩ := finset.exists_mem_eq_sup' hs 
+    (λ (p : χ × χ), margin voters Q p.fst p.snd),
   use ⟨b, b_in, hb.symm⟩, 
 end 
 
@@ -104,26 +105,25 @@ begin
   set m := d.succ with m_succ,
   obtain ⟨b, b_in⟩ := finset.card_pos.1 prof.cpos,
   have h_erase_card : ∀ z ∈ prof.candidates, finset.card (prof.candidates.erase z) = m,
-    { intros z z_in,
-      rw finset.card_erase_of_mem z_in,
-      exact nat.pred_eq_of_eq_succ hm, },
+  { intros z z_in,
+    rw finset.card_erase_of_mem z_in,
+    exact nat.pred_eq_of_eq_succ hm, },
   set prof' : election_profile χ υ := 
     ⟨(prof.candidates.erase b), 
      (by rw (h_erase_card b b_in); omega), 
-     prof.voters, prof.vpos, prof.Q⟩ with h_prof',
-  have prof'_cands : prof'.candidates.card = m := by rw ← h_erase_card b b_in, 
-  obtain ⟨a, a_in⟩ := IH prof' prof'_cands,
+     prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+  obtain ⟨a, a_in⟩ := IH prof' (by rw ← h_erase_card b b_in),
   have card_eq_d : prof.candidates.card = d + 2 := by rw hm,
-  simp only [simple_stable_voting, simple_stable_voting', card_eq_d, 
-    exists_prop, exists_and_distrib_right, exists_eq_right,
+  simp only [simple_stable_voting, simple_stable_voting', 
+    card_eq_d, exists_prop, exists_and_distrib_right, exists_eq_right,
     finset.mem_image, finset.mem_filter, finset.filter_congr_decidable,
     prod.exists, finset.mem_product],
   set viable_set : finset (χ × χ) := (prof.candidates.product prof.candidates).filter
     (λ p, if p2_in : p.2 ∈ prof.candidates 
-      then p.1 ∈ simple_stable_voting' prof.voters prof.Q d.succ (prof.candidates.erase p.2)
-          ( by rwa h_erase_card p.snd p2_in) (nat.succ_pos d)
-      else false)
-    with hvs,
+      then p.1 ∈ simple_stable_voting' prof.voters prof.Q d.succ 
+           (prof.candidates.erase p.2)
+           (by rwa h_erase_card p.snd p2_in) (nat.succ_pos d)
+      else false) with hvs,
   have viable_nonempty : viable_set.nonempty,
   { use ⟨a,b⟩,
     have : a ∈ (prof.candidates.erase b) := 
@@ -133,16 +133,13 @@ begin
       dif_pos, dif_pos, and_true, finset.mem_filter, finset.mem_product],
     exact ⟨(finset.mem_erase.1 this).2, a_in⟩, },  
   obtain ⟨p, p_in, hp⟩ := exists_best_margin prof.voters prof.Q viable_nonempty,
-  refine ⟨p.1, p.2, ⟨_,_⟩⟩,
-  { rw hvs at p_in,
-    simp only [finset.mem_filter] at p_in,
-    cases p_in with hp₁ hp₂,
-    refine ⟨finset.mem_product.1 hp₁, _⟩,
-    simp only [(finset.mem_product.mp hp₁).right, dif_pos, finset.mem_product,
-      true_and, dif_pos, finset.mem_product, true_and,
-      dif_pos, finset.mem_product] at *,
-    exact hp₂, },
-  { convert hp, },
+  refine ⟨p.1, p.2, ⟨_,(by rw hp)⟩⟩,
+  rw [hvs, finset.mem_filter] at p_in,
+  cases p_in with hp₁ hp₂,
+  refine ⟨finset.mem_product.1 hp₁, _⟩,
+  simpa only [(finset.mem_product.mp hp₁).right, dif_pos, finset.mem_product,
+    true_and, dif_pos, finset.mem_product, true_and,
+    dif_pos, finset.mem_product] using hp₂, 
 end
 
 lemma exists_ssv_winner {χ υ : Type*} (prof : election_profile χ υ) :

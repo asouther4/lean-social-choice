@@ -82,7 +82,7 @@ lemma ge_two_of_ne_zero_ne_one {n : ℕ} (hn₀ : ¬ n = 0) (hn₁ : ¬ n = 1) :
 begin
   cases n with d, { exact (hn₀ nat.nat_zero_eq_zero).elim, },
   induction d with d hd, {exact (hn₁ rfl).elim, },
-  rw [nat.succ_le_iff],
+  rw nat.succ_le_iff,
   exact nat.one_lt_succ_succ d,  
 end
 
@@ -169,7 +169,7 @@ begin
   { intros prof hn,
     linarith [hn, prof.cpos], },
   induction d with d IH,
-  { intros prof hn h_uniq,
+  { intros prof hn _,
     rwa ssv_singleton prof hn, },
   set m := d.succ with m_succ,
   intros prof hm h_uniq,

@@ -488,12 +488,13 @@ def is_compatible (Q : quasi_order σ) (R : pref_order σ): Prop := ∀ x y : σ
 For every quasi_order, there exists a compatible preference order. 
 Lemma 1*f according to Sen. 
 -/
+/-
 lemma compatible_pref_order_of_quasi (Q : quasi_order σ) : 
   ∃ R : pref_order σ, is_compatible Q R :=
 begin
   sorry, 
 end
-
+-/
 
 /-! ### Quasitransitivity and Acyclicality -/
 

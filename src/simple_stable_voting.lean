@@ -1,11 +1,15 @@
 import basic
 
+
 structure election_profile (χ υ : Type*) :=
 (cands : finset χ)
 (cpos : 0 < cands.card)
 (voters : finset υ)
 (vpos : 0 < voters.card)
 (Q : υ → χ → χ → Prop)
+
+/-  N "removing b from N" 
+    a : (N.remove b)  -/
 
 instance {α : Type*} (s : finset α) : decidable s.nonempty :=
 begin
@@ -23,10 +27,18 @@ def best_margin {χ υ : Type*} (voters : finset υ) (s : finset (χ × χ)) (Q 
     then s.sup' hn (λ p, margin voters Q p.1 p.2) 
   else 0
 
-def uniquely_weighted {χ υ : Type*} 
-  (voters : finset υ) (cands : finset χ) (Q : υ → χ → χ → Prop)
+def uniquely_weighted {χ υ : Type*} -- 
+  (voters : finset υ) (cands : finset χ) (Q : υ → χ → χ → Prop) 
   [∀ v, decidable_rel (Q v)] : Prop := 
 ∀ a b a' b' ∈ cands, margin voters Q a b ≠ margin voters Q a' b'
+
+/-
+def uniquely_weighted {χ υ : Type*} -- 
+  (voters : finset υ) (cands : finset χ) (Q : υ → χ → χ → Prop) 
+  [∀ v, decidable_rel (Q v)] : Prop := 
+∀ a b a' b' ∈ cands, ((a ≠ a' ) ∨ (b ≠ b')) → 
+  margin voters Q a b ≠ margin voters Q a' b'
+-/
 
 def simple_stable_voting' {χ υ : Type*} (voters : finset υ) (Q : υ → χ → χ → Prop)
   [decidable_eq χ] 

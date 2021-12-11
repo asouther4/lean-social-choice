@@ -9,14 +9,6 @@ structure election_profile (χ υ : Type*) :=
 (vpos : 0 < voters.card)
 (Q : υ → χ → χ → Prop)
 
-instance {α : Type*} (s : finset α) : decidable s.nonempty :=
-begin
-  rw ←finset.card_pos,
-  apply_instance,
-end
-
-def restrict {χ : Type*} (q : χ → χ → Prop) (s : finset χ) : χ → χ → Prop := 
-λ a b, q a b ∧ a ∈ s ∧ b ∈ s  
 
 lemma restrict_of_subset {χ : Type*} {q : χ → χ → Prop} {s t : finset χ} {a b : χ}
   (hst : s ⊆ t) (hq : (restrict q s) a b) : (restrict q t) a b := 
@@ -32,10 +24,15 @@ begin
     exact ⟨⟨hxy,x_in,y_in⟩,x_in, y_in⟩, },
 end
 
-
 def is_undefeated {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
-  (x : χ) [∀ v, decidable_rel (Q v)] [∀ k : list χ, decidable (k ≠ list.nil)] := 
+  (x : χ) [∀ v, decidable_rel (Q v)] [decidable_eq χ]/-[∀ k : list χ, decidable (k ≠ list.nil)] -/:= 
   ∀ y ∈ cands, ¬ defeats voters cands Q y x
+
+instance {α : Type*} (s : finset α) : decidable s.nonempty :=
+begin
+  rw ←finset.card_pos,
+  apply_instance,
+end
 
 def best_margin {χ υ : Type*} (voters : finset υ) (s : finset (χ × χ)) (Q : υ → χ → χ → Prop) 
   [∀ v, decidable_rel (Q v)] : ℤ :=
@@ -110,7 +107,7 @@ begin
   exact restrict_of_subset hst hab,
 end
 
-lemma cylical_of_serial' {χ : Type*} :
+lemma cyclical_of_serial' {χ : Type*} :
   ∀ (n : ℕ) (s : finset χ) (R : χ → χ → Prop), n = s.card → s.nonempty →
     (∀ x ∈ s, ∃ y ∈ s, R x y) → cyclical (restrict R s) :=
 begin
@@ -148,9 +145,13 @@ begin
     have b_in : b ∈ t,
     { simp only [finset.mem_filter] at ⊢ a_in,
       exact ⟨b_in, relation.trans_gen.tail a_in.2 ⟨hab,a_in.1,b_in⟩⟩, },
-    exact ⟨b, b_in, ⟨hab, a_in, b_in⟩⟩,
-  },
+    exact ⟨b, b_in, ⟨hab, a_in, b_in⟩⟩ }
 end
+
+lemma cyclical_of_serial {χ : Type*} {s : finset χ} {R : χ → χ → Prop} 
+  (hs₁ : s.nonempty) (hs₂ : ∀ x ∈ s, ∃ y ∈ s, R x y) :
+  cyclical (restrict R s) :=
+cyclical_of_serial' s.card s R rfl hs₁ hs₂
 
 /- Random lemmas for natural numbers -/
 lemma exists_eq_plus_two (n : ℕ) (hn₀ : ¬ n = 0) (hn₁ : ¬ n = 1) : 
@@ -170,10 +171,9 @@ begin
   exact nat.one_lt_succ_succ d,  
 end
 
-lemma mem_cands_of_mem_sv {χ υ : Type*} (prof : election_profile χ υ) (a : χ) : 
-  a ∈ stable_voting prof → a ∈ prof.cands := 
+lemma mem_cands_of_mem_sv {χ υ : Type*} {prof : election_profile χ υ} {a : χ}  
+  (a_in : a ∈ stable_voting prof) : a ∈ prof.cands := 
 begin
-  intro a_in,
   by_cases hcands : prof.cands.card = 1, 
   { rwa (sv_singleton prof hcands) at a_in },
   obtain ⟨n, hn⟩ := exists_eq_plus_two prof.cands.card 
@@ -214,7 +214,7 @@ begin
   set m := d.succ with m_succ,
   obtain ⟨b, b_in⟩ := finset.card_pos.1 prof.cpos,
   have h_erase_card : ∀ z ∈ prof.cands, finset.card (prof.cands.erase z) = m,
-  { intros z z_in,
+  { intros z  z_in,
     rw finset.card_erase_of_mem z_in,
     exact nat.pred_eq_of_eq_succ hm, },
   set prof' : election_profile χ υ := 
@@ -240,53 +240,36 @@ begin
     have foo : (∀ (x : χ × χ),
        x ∈ prof.cands.product prof.cands →
        ¬(λ (p : χ × χ), still_wins p.fst p.snd ∧ 
-          ¬defeats prof.voters prof.cands prof.Q p.snd p.fst) x) := sorry,
+          ¬defeats prof.voters prof.cands prof.Q p.snd p.fst) x),
+    { push_neg,
+      intros x x_in hx₁, by_contra hx₂,
+      apply h, use x,
+      simp only [hvs,finset.mem_filter],
+      exact ⟨x_in, hx₁, hx₂⟩ },
     simp only [and_imp, prod.forall, not_and, not_not, finset.mem_product] at foo,
-    have : ∀ x ∈ prof.cands, ∃ y ∈ prof.cands, 
-      defeats prof.voters prof.cands prof.Q y x,
+    have h_ser : ∀ x ∈ prof.cands, ∃ y ∈ prof.cands, 
+      defeats prof.voters prof.cands prof.Q x y,
     { intros x x_in,
       set prof_rem_x : election_profile χ υ := 
       ⟨(prof.cands.erase x), 
        (by rw (h_erase_card x x_in); exact nat.succ_pos d), 
        prof.voters, prof.vpos, prof.Q⟩ with h_prof_rem_x,
       obtain ⟨y, y_in⟩ := IH prof_rem_x (by rw ← h_erase_card x x_in),
-      suffices : still_wins y x,
-      { --refine ⟨y, _, foo y x _ x_in this⟩,
-        sorry,
-
-      },
-      sorry,
-
-    },
-
-  },
-  sorry,
-
-  /-
-  simp only [simple_stable_voting, simple_stable_voting', 
-    card_eq_d, exists_prop, exists_and_distrib_right, exists_eq_right,
-    finset.mem_image, finset.mem_filter, finset.filter_congr_decidable,
-    prod.exists, finset.mem_product],
-  set viable_set : finset (χ × χ) := (prof.cands.product prof.cands).filter
-    (λ p, if p2_in : p.2 ∈ prof.cands 
-      then p.1 ∈ simple_stable_voting' prof.voters prof.Q d.succ 
-           (prof.cands.erase p.2)
-           (by rwa h_erase_card p.snd p2_in) (nat.succ_pos d)
-      else false) with hvs,
-  have viable_nonempty : viable_set.nonempty,
-  { use ⟨a,b⟩,
-    have : a ∈ (prof.cands.erase b) := 
-      by simp only [mem_cands_of_mem_winners prof' a a_in],
-    simp only [simple_stable_voting, h_prof', h_erase_card b b_in, m_succ] at a_in,
-    simp only [finset.mem_filter, finset.mem_product, b_in, 
-      dif_pos, dif_pos, and_true, finset.mem_filter, finset.mem_product],
-    exact ⟨(finset.mem_erase.1 this).2, a_in⟩, },  
+      have y_in' : y ∈ prof.cands := 
+        (finset.mem_erase.1 (mem_cands_of_mem_sv y_in)).2,
+      suffices : still_wins y x, { exact ⟨y, y_in', foo y x y_in' x_in this⟩, },
+      simp only [still_wins, x_in, dif_pos],
+      convert y_in,
+      rwa h_erase_card x x_in, },
+    apply not_acyclical_in'_of_cyclical'_restrict (cyclical'_of_cyclical 
+      (cyclical_of_serial (finset.card_pos.1 prof.cpos) h_ser)),
+    exact defeat_acyclical_in' prof.voters prof.cands prof.Q, },
   obtain ⟨p, p_in, hp⟩ := exists_best_margin prof.voters prof.Q viable_nonempty,
-  refine ⟨p.1, p.2, ⟨_,(by rw hp)⟩⟩,
+  refine ⟨p.1,p.2, ⟨_, (by rw hp)⟩⟩,
   rw [hvs, finset.mem_filter] at p_in,
-  cases p_in with hp₁ hp₂,
-  refine ⟨finset.mem_product.1 hp₁, _⟩,
-  simpa only [(finset.mem_product.mp hp₁).right, dif_pos, finset.mem_product,
-    true_and, dif_pos, finset.mem_product, true_and,
-    dif_pos, finset.mem_product] using hp₂, -/
+  rcases p_in with ⟨hp₁, hp₂, hp₃⟩,
+  refine ⟨finset.mem_product.1 hp₁, ⟨ _,hp₃⟩⟩,
+  simp only [(finset.mem_product.mp hp₁).right, dif_pos, 
+    finset.mem_product, still_wins] at hp₂ ⊢,
+  exact hp₂,
 end

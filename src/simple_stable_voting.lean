@@ -10,17 +10,17 @@ structure election_profile (χ υ : Type*) :=
 (Q : υ → χ → χ → Prop)
 
 /-  N "removing b from N" 
-    a : (N.remove b)  -/
+    a : (N.remove b)  
+def margin {χ υ : Type*} (voters : finset υ) (Q : υ → χ → χ → Prop) (c c' : χ) 
+  [∀ v, decidable_rel (Q v)] : ℤ :=
+(voters.filter (λ v, Q v c c')).card - (voters.filter (λ v, Q v c' c)).card
+-/
 
 instance {α : Type*} (s : finset α) : decidable s.nonempty :=
 begin
   rw ←finset.card_pos,
   apply_instance,
 end
-
-def margin {χ υ : Type*} (voters : finset υ) (Q : υ → χ → χ → Prop) (c c' : χ) 
-  [∀ v, decidable_rel (Q v)] : ℤ :=
-(voters.filter (λ v, Q v c c')).card - (voters.filter (λ v, Q v c' c)).card
 
 def best_margin {χ υ : Type*} (voters : finset υ) (s : finset (χ × χ)) (Q : υ → χ → χ → Prop) 
   [∀ v, decidable_rel (Q v)] : ℤ :=

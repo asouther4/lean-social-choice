@@ -52,26 +52,13 @@ lemma ineq5 (i n : ℕ) (e : i < n) (z: ¬i = n - 1) : i < n - 1 := by omega
 
 lemma dominate_ineq3 {a b : ℕ} (e : 0 < b) : a < b - 1 → a + 1 < b := by omega
 
-/- TODO: other side of the iff -/
-lemma cyclical'_of_cyclical {χ : Type*} (q : χ → χ → Prop) (s : finset χ)  : 
-  cyclical q → cyclical' q :=
+lemma is_cycle'_of_is_cycle'_restrict {χ : Type*} {P : χ → χ → Prop} {c : list χ} 
+  {s : finset χ} (h : is_cycle' (restrict P s) c) : is_cycle' P c :=
 begin
-  simp only [cyclical, cyclical', is_cycle'],
-  rintros ⟨x, hx⟩,
-  obtain ⟨l, hl₁, hl₂, hl₃⟩ := exists_chain_of_relation_trans_gen hx,
-  have l_last : l.last hl₁ = x := by rw ← hl₃;
-    exact (list.last_cons (list.cons_ne_nil _ _) hl₁).symm,
-  rw ← l_last at hl₂, 
-  exact ⟨l, hl₁, hl₂⟩,
-end
-
-/- TODO: GOLF-/
-lemma nonempty_ico {X : Type*} (c : list X) (e : 0 < c.length) : (finset.Ico 0 c.length).nonempty  :=
-begin
-    fconstructor,
-    use 0,
-    simp at *,
-    omega,
+  simp only [is_cycle', list.last, ne.def] at h ⊢,
+  cases h with hc₁ hc₂, 
+  refine ⟨hc₁, list.chain.imp (λ a b hab, _) hc₂⟩,
+  exact hab.1,
 end
 
 def length_cycle_pos {χ : Type*} {l : list χ} {P : χ → χ → Prop} 
@@ -81,8 +68,8 @@ begin
     exact list.length_pos_of_ne_nil a,
 end
 
-lemma dominates_of_cycle_index {χ : Type*} (P : χ → χ → Prop) (l : list χ) (hl : is_cycle' P l)
-  (i : ℕ) (i_bound : i < l.length) : 
+lemma dominates_of_cycle_index {χ : Type*} {P : χ → χ → Prop} {l : list χ} 
+  (hl : is_cycle' P l) (i : ℕ) (i_bound : i < l.length) : 
   P (l.nth_le i i_bound) (l.nth_le ((i + 1) % l.length) (nat.mod_lt (i + 1) (length_cycle_pos hl))) :=
 begin
     unfold is_cycle' at hl,
@@ -103,6 +90,64 @@ begin
     exact dominate_ineq3 (list.length_pos_of_ne_nil e) i_bound2,
     simp_rw underflow,
     exact c_right,
+end
+
+lemma dominates_of_cycle  {χ : Type*} {l : list χ} {P : χ → χ → Prop} 
+  (hl : is_cycle' P l) [decidable_eq χ] : ∀ x ∈ l, ∃ y ∈ l, P x y :=
+begin
+    intros x x_in,
+    let i := l.index_of x,
+    have d := dominates_of_cycle_index hl,
+    specialize d i,
+    specialize d (list.index_of_lt_length.mpr x_in),
+    use (l.nth_le ((i + 1) % l.length) ((i + 1).mod_lt (length_cycle_pos hl))),
+    split,
+    apply list.nth_le_mem,
+    simp_rw list.index_of_nth_le at d,
+    exact d,
+end
+
+lemma mem_of_is_cycle'_restrict {χ : Type*} [decidable_eq χ] 
+  {P : χ → χ → Prop} {l : list χ} {s : finset χ} {a : χ} 
+  (a_in : a ∈ l) (hl : is_cycle' (restrict P s) l) :
+  a ∈ s :=
+begin
+  obtain ⟨b, b_in, hb⟩ := dominates_of_cycle hl a a_in,
+  exact hb.2.1,
+end
+
+
+/- TODO: other side of the iff -/
+lemma cyclical'_of_cyclical {χ : Type*} {q : χ → χ → Prop} (h : cyclical q) : 
+  cyclical' q :=
+begin
+  simp only [cyclical, cyclical', is_cycle'],
+  cases h with x hx,
+  obtain ⟨l, hl₁, hl₂, hl₃⟩ := exists_chain_of_relation_trans_gen hx,
+  have l_last : l.last hl₁ = x := by rw ← hl₃;
+    exact (list.last_cons (list.cons_ne_nil _ _) hl₁).symm,
+  rw ← l_last at hl₂, 
+  exact ⟨l, hl₁, hl₂⟩,
+end
+
+lemma not_acyclical_in'_of_cyclical'_restrict {χ : Type*} [decidable_eq χ]
+  {q : χ → χ → Prop} {s : finset χ} 
+  (h : cyclical' (restrict q s)) : ¬ acyclical_in' q s :=
+begin
+  rcases h with ⟨l, hl⟩,
+  simp only [acyclical_in', exists_prop, not_not, not_forall],
+  refine ⟨l, _, is_cycle'_of_is_cycle'_restrict hl⟩,
+  intros x x_in,
+  exact mem_of_is_cycle'_restrict x_in hl,
+end
+
+/- TODO: GOLF-/
+lemma nonempty_ico {X : Type*} (c : list X) (e : 0 < c.length) : (finset.Ico 0 c.length).nonempty  :=
+begin
+    fconstructor,
+    use 0,
+    simp at *,
+    omega,
 end
 
 lemma split_cycle_to_margin_cycle {χ υ : Type*} 
@@ -138,7 +183,7 @@ begin
   let mini := (c.nth_le mini_idx bounds),
   have mini_mem := list.nth_le_mem c mini_idx bounds,
   obtain ⟨defeated, defeats⟩ := 
-    dominates_of_cycle_index (defeats voters cands Q) c ⟨c_ne_nil, hc⟩ mini_idx bounds,
+    dominates_of_cycle_index ⟨c_ne_nil, hc⟩ mini_idx bounds,
   simp only [nat.Ico_zero_eq_range, finset.mem_range] at mini_req,
   contrapose defeats,
   push_neg,

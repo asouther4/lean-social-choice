@@ -1,4 +1,5 @@
 import basic
+import split_cycle
 
 
 structure election_profile (χ υ : Type*) :=

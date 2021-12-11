@@ -28,7 +28,7 @@ begin
   exact list.last_mem (cons_ne_nil _ _),
 end 
 
-lemma exists_chain_of_relation_trans_gen' (h : relation.trans_gen r a b) :
+lemma exists_chain_of_relation_trans_gen (h : relation.trans_gen r a b) :
   ∃ l ≠ list.nil, chain r a l ∧ last (a :: l) (cons_ne_nil _ _) = b :=
 begin
   apply relation.trans_gen.head_induction_on h,

@@ -1,5 +1,5 @@
-import basic
 import for_mathlib
+import split_cycle
 import data.list.basic
 
 structure election_profile (χ υ : Type*) :=
@@ -9,21 +9,11 @@ structure election_profile (χ υ : Type*) :=
 (vpos : 0 < voters.card)
 (Q : υ → χ → χ → Prop)
 
-/-  N "removing b from N" 
-    a : (N.remove b)  -/
-
 instance {α : Type*} (s : finset α) : decidable s.nonempty :=
 begin
   rw ←finset.card_pos,
   apply_instance,
 end
-
-/-
-def is_cycle {χ : Type*} (q : χ → χ → Prop) (l : list χ) [decidable (l ≠ list.nil)] :=
-if hl : l ≠ list.nil then list.chain q (l.last hl) l else false -/
-
-def is_cycle {χ : Type*} (P : χ → χ → Prop) (c : list χ) := 
-  ∃ (e : c ≠ list.nil), list.chain P (c.last e) c
 
 def restrict {χ : Type*} (q : χ → χ → Prop) (s : finset χ) : χ → χ → Prop := 
 λ a b, q a b ∧ a ∈ s ∧ b ∈ s  
@@ -42,34 +32,6 @@ begin
     exact ⟨⟨hxy,x_in,y_in⟩,x_in, y_in⟩, },
 end
 
-def cyclical {χ : Type*} (q : χ → χ → Prop) : Prop := 
-  ∃ x, relation.trans_gen q x x 
-
-def cyclical' {χ : Type*} (q : χ → χ → Prop) : Prop := 
-∃ l, is_cycle q l
-
-/- TODO: other side of the iff -/
-lemma cyclical'_of_cyclical {χ : Type*} (q : χ → χ → Prop) (s : finset χ)  : 
-  cyclical q → cyclical' q :=
-begin
-  simp only [cyclical, cyclical', is_cycle],
-  rintros ⟨x, hx⟩,
-  obtain ⟨l, hl₁, hl₂, hl₃⟩ := exists_chain_of_relation_trans_gen hx,
-  have l_last : l.last hl₁ = x := by rw ← hl₃;
-    exact (list.last_cons (list.cons_ne_nil _ _) hl₁).symm,
-  rw ← l_last at hl₂, 
-  exact ⟨l, hl₁, hl₂⟩,
-end
-
-
-def margin {χ υ : Type*} (voters : finset υ) (Q : υ → χ → χ → Prop) (c c' : χ) 
-  [∀ v, decidable_rel (Q v)] : ℤ :=
-(voters.filter (λ v, Q v c c')).card - (voters.filter (λ v, Q v c' c)).card
-
-def defeats {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
-  (x y: χ) [∀ v, decidable_rel (Q v)] [∀ k : list χ, decidable (k ≠ list.nil)] :=
-0 < margin voters Q x y ∧ ¬ (∃ l : list χ, (∀ c ∈ l, c ∈ cands) ∧ x ∈ l ∧ y ∈ l ∧
-    is_cycle (λ a b, margin voters Q x y ≤ margin voters Q a b) l)
 
 def is_undefeated {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
   (x : χ) [∀ v, decidable_rel (Q v)] [∀ k : list χ, decidable (k ≠ list.nil)] := 
@@ -147,9 +109,6 @@ begin
   use x, refine (trans_gen_of_imp (λ a b hab, _ ) hx),
   exact restrict_of_subset hst hab,
 end
-
-example {χ : Type*} {s t : finset χ} (h : t ⊂ s) : t.card < s.card := by refine finset.card_lt_card h
-example {m n : ℕ} (h : m < n.succ) : m ≤ n := nat.lt_succ_iff.mp h
 
 lemma cylical_of_serial' {χ : Type*} :
   ∀ (n : ℕ) (s : finset χ) (R : χ → χ → Prop), n = s.card → s.nonempty →

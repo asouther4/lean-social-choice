@@ -40,9 +40,12 @@ def margin_pos {χ υ : Type*} (voters : finset υ) (Q : υ → χ → χ → Pr
 def defeats {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
   [∀ v, decidable_rel (Q v)] [decidable_eq χ] --[∀ k : list χ, decidable (k ≠ list.nil)] 
   (x y: χ) := 
-let Q' : υ → χ → χ → Prop := λ i, restrict (Q i) cands in
 0 < margin voters Q x y ∧ ¬ (∃ l : list χ, (∀ c ∈ l, c ∈ cands) ∧ x ∈ l ∧ y ∈ l ∧
     is_cycle' (λ a b, margin voters Q x y ≤ margin voters Q a b) l)
+
+def is_undefeated {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
+  (x : χ) [∀ v, decidable_rel (Q v)] [decidable_eq χ] := 
+  ∀ y ∈ cands, ¬ defeats voters cands Q y x
 
 /------- Lemmas -------/
 
@@ -168,7 +171,7 @@ begin
 end
 
 theorem defeat_acyclical_in' {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
-  [decidable_eq χ] [∀ v, decidable_rel (Q v)] /-[∀ k : list χ, decidable (k ≠ list.nil)]-/ :
+  [decidable_eq χ] [∀ v, decidable_rel (Q v)] :
   acyclical_in' (defeats voters cands Q) cands :=
 begin
   rintros c hcs ⟨c_ne_nil, hc⟩,
@@ -222,60 +225,25 @@ begin
     exact mini_req },
 end 
 
-/-
-theorem defeat_acyclical' {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
-  [decidable_eq χ] [∀ v, decidable_rel (Q v)] /-[∀ k : list χ, decidable (k ≠ list.nil)]-/ :
-  acyclical' (defeats voters cands Q) :=
+lemma defeat_irreflexive {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
+  [decidable_eq χ] [∀ v, decidable_rel (Q v)] :
+  irreflexive (defeats voters cands Q) := 
 begin
-  rintros c ⟨c_ne_nil, hc⟩,
-  have ico_nonempty := nonempty_ico c (list.length_pos_of_ne_nil c_ne_nil),
-  have margin_pos_cyc := split_cycle_to_margin_cycle voters cands Q c ⟨c_ne_nil, hc⟩,
-  obtain ⟨mini_idx, bounds, mini_req⟩ := 
-    finset.exists_min_image (finset.Ico 0 c.length) (λ x, (margin voters Q) 
-    (c.nth_le (x % c.length) (nat.mod_lt x (list.length_pos_of_ne_nil c_ne_nil))) 
-    (c.nth_le ((x+1) % c.length) (nat.mod_lt (x+1) (list.length_pos_of_ne_nil c_ne_nil)))) 
-    ico_nonempty,
-  simp only [nat.Ico_zero_eq_range, finset.mem_range] at bounds,
-  let mini := (c.nth_le mini_idx bounds),
-  have mini_mem := list.nth_le_mem c mini_idx bounds,
-  obtain ⟨defeated, defeats⟩ := 
-    dominates_of_cycle_index (defeats voters cands Q) c ⟨c_ne_nil, hc⟩ mini_idx bounds,
-  simp only [nat.Ico_zero_eq_range, finset.mem_range] at mini_req,
-  contrapose defeats,
-  push_neg,
-  refine ⟨c, _,mini_mem, _, _⟩,
-  { sorry, },
-  { exact list.nth_le_mem c ((mini_idx + 1) % c.length) 
-      (nat.mod_lt (mini_idx + 1) (list.length_pos_of_ne_nil c_ne_nil)) },
-  unfold is_cycle',
-  use c_ne_nil,
-  rw list.chain_iff_nth_le,
-  split,
-  { intro h,
-    specialize mini_req (c.length - 1),
-    have o : ∀ (n : ℕ), (0 < n) → n - 1 < n := by omega,
-    { specialize mini_req (o c.length h),
-      have cal : (c.length-1) % c.length = c.length-1,
-      { apply nat.mod_eq_of_lt,
-      exact o c.length h },
-      simp_rw cal at mini_req,
-      have cal : (c.length - 1 + 1) % c.length = 0,
-      { rw succ_pred h,
-        exact nat.mod_self c.length, },
-      simp_rw cal at mini_req,
-      rw ←list.last_eq_nth_le c c_ne_nil at mini_req,  
-      have test : (margin voters Q (c.nth_le (mini_idx % c.length) (mini_idx.mod_lt (list.length_pos_of_ne_nil c_ne_nil))) (c.nth_le ((mini_idx + 1) % c.length) ((mini_idx + 1).mod_lt (list.length_pos_of_ne_nil c_ne_nil))) ≤ margin voters Q (c.last c_ne_nil) (c.nth_le 0 (eq.rec ((c.length - 1 + 1).mod_lt (list.length_pos_of_ne_nil c_ne_nil)) cal))) = (margin voters Q (c.nth_le mini_idx bounds) (c.nth_le ((mini_idx + 1) % c.length) ((mini_idx + 1).mod_lt (length_cycle_pos ⟨c_ne_nil,hc⟩))) ≤ margin voters Q (c.last c_ne_nil) (c.nth_le 0 h)),
-        { congr,
-        exact nat.mod_eq_of_lt bounds, },
-      rw ←test,
-      exact mini_req } },
-  { intros i h,
-    specialize mini_req i,
-    specialize mini_req (nat.lt_of_lt_pred h),
-    simp_rw (nat.mod_eq_of_lt bounds) at mini_req,
-    simp_rw (nat.mod_eq_of_lt (nat.lt_of_lt_pred h)) at mini_req,
-    have o : ∀ i n, i < n - 1 → 0 < n → (i + 1) < n := by omega,
-    simp_rw (nat.mod_eq_of_lt (o i c.length h (list.length_pos_of_ne_nil c_ne_nil))) at mini_req,
-    exact mini_req },
-end 
--/
+    intros a ha,
+    simp only [defeats, margin, lt_self_iff_false, sub_self, false_and] at ha,
+    exact ha,
+end
+
+lemma undefeated_erase {χ υ : Type*} {voters : finset υ} {cands: finset χ} {Q : υ → χ → χ → Prop}
+  {a b : χ} [decidable_eq χ] [∀ v, decidable_rel (Q v)] 
+  (ha : is_undefeated voters (cands.erase b) Q a) (hb : ¬ defeats voters cands Q b a) :
+  is_undefeated voters cands Q a :=
+begin
+  intros y y_in,
+  by_cases hby : y = b, { rwa ← hby at hb, },
+  simp only [is_undefeated, defeats, not_exists, 
+    and_imp, exists_prop, not_and, not_not, ne.def, finset.mem_erase, not_forall] at *,
+  intro hya,
+  obtain ⟨x, hx₁, hx₂ ⟩ := ha y hby y_in hya,
+  exact ⟨x, λ c c_in, (hx₁ c c_in).2, hx₂⟩,
+end

@@ -24,10 +24,6 @@ begin
     exact ⟨⟨hxy,x_in,y_in⟩,x_in, y_in⟩, },
 end
 
-def is_undefeated {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
-  (x : χ) [∀ v, decidable_rel (Q v)] [decidable_eq χ]/-[∀ k : list χ, decidable (k ≠ list.nil)] -/:= 
-  ∀ y ∈ cands, ¬ defeats voters cands Q y x
-
 instance {α : Type*} (s : finset α) : decidable s.nonempty :=
 begin
   rw ←finset.card_pos,
@@ -272,4 +268,50 @@ begin
   simp only [(finset.mem_product.mp hp₁).right, dif_pos, 
     finset.mem_product, still_wins] at hp₂ ⊢,
   exact hp₂,
+end
+
+lemma exists_sv_winner {χ υ : Type*} (prof : election_profile χ υ) :
+  ∃ a, a ∈ stable_voting prof := exists_sv_winner' prof.cands.card prof rfl
+
+lemma sv_winner_undefeated' {χ υ : Type*} :
+  ∀ (n : ℕ) (prof : election_profile χ υ), prof.cands.card = n → 
+  ∀ a ∈ stable_voting prof, is_undefeated prof.voters prof.cands prof.Q a :=
+begin
+  intro n,
+  cases n with d, 
+  { intros prof hn,
+    linarith [hn, prof.cpos], },
+  --simp only [stable_voting],
+  induction d with d IH,
+  { intros prof hn a a_in y y_in,
+    rw finset.card_le_one.1 (le_of_eq hn) 
+      a (mem_cands_of_mem_sv a_in) y y_in,
+    exact defeat_irreflexive prof.voters prof.cands prof.Q y },
+  intros prof cands_card a a_in,
+  have card_eq_d : prof.cands.card = d + 2 := by rw cands_card,
+  simp only [stable_voting, stable_voting', card_eq_d, exists_prop, 
+    exists_and_distrib_right, exists_eq_right, finset.mem_image,
+    finset.mem_filter, finset.filter_congr_decidable, prod.exists, 
+    finset.mem_product] at a_in, 
+  rcases a_in with ⟨x,⟨⟨p_in,hp⟩,ha⟩⟩,
+  have p_in' : (a,x).snd ∈ prof.cands := 
+   by simp only; exact p_in.2,
+  rw dif_pos p_in' at hp,
+  intros b b_in,
+  by_cases hbx : b = x, { rw hbx, exact hp.2 },
+  have h_erase_card : ∀ z ∈ prof.cands, finset.card (prof.cands.erase z) = d.succ,
+  { intros z  z_in,
+    rw finset.card_erase_of_mem z_in,
+    exact nat.pred_eq_of_eq_succ cands_card, },
+  set prof' : election_profile χ υ := 
+    ⟨(prof.cands.erase x), 
+     (by rw (h_erase_card x p_in.2); exact nat.zero_lt_succ d), 
+     prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+  have a_in' : a ∈ stable_voting prof',
+  { simp only [stable_voting], convert hp.1, exact h_erase_card x p_in.2 },
+  suffices : ¬defeats prof'.voters prof'.cands prof'.Q b a,
+  { sorry, },
+  sorry, 
+  have := (IH prof' (by convert h_erase_card x p_in.2) a a_in') b,
+
 end

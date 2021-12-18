@@ -6,9 +6,7 @@ structure election_profile (χ υ : Type*) :=
 (cands : finset χ)
 (cpos : 0 < cands.card)
 (voters : finset υ)
-(vpos : 0 < voters.card)
 (Q : υ → χ → χ → Prop)
-
 
 lemma restrict_of_subset {χ : Type*} {q : χ → χ → Prop} {s t : finset χ} {a b : χ}
   (hst : s ⊆ t) (hq : (restrict q s) a b) : (restrict q t) a b := 
@@ -216,7 +214,7 @@ begin
   set prof' : election_profile χ υ := 
     ⟨(prof.cands.erase b), 
      (by rw (h_erase_card b b_in); omega), 
-     prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+     prof.voters, prof.Q⟩ with h_prof', 
   obtain ⟨a, a_in⟩ := IH prof' (by rw ← h_erase_card b b_in),
   have card_eq_d : prof.cands.card = d + 2 := by rw hm,
   simp only [stable_voting, stable_voting', card_eq_d, 
@@ -249,7 +247,7 @@ begin
       set prof_rem_x : election_profile χ υ := 
       ⟨(prof.cands.erase x), 
        (by rw (h_erase_card x x_in); exact nat.succ_pos d), 
-       prof.voters, prof.vpos, prof.Q⟩ with h_prof_rem_x,
+       prof.voters, prof.Q⟩ with h_prof_rem_x,
       obtain ⟨y, y_in⟩ := IH prof_rem_x (by rw ← h_erase_card x x_in),
       have y_in' : y ∈ prof.cands := 
         (finset.mem_erase.1 (mem_cands_of_mem_sv y_in)).2,
@@ -299,7 +297,7 @@ begin
   set prof' : election_profile χ υ := 
     ⟨(prof.cands.erase x), 
      (by rw h_erase_card; exact nat.zero_lt_succ d), 
-     prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+     prof.voters, prof.Q⟩ with h_prof', 
   have a_in' : a ∈ stable_voting prof',
   { simp only [stable_voting], convert hp.1 },
   refine undefeated_erase _ hp.2,
@@ -353,7 +351,7 @@ begin
     set prof' : election_profile χ υ := 
     ⟨(prof.cands.erase y), 
      (by rw [h_erase_card y q_in.2, m_succ]; exact nat.zero_lt_succ d), 
-     prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+     prof.voters, prof.Q⟩ with h_prof', 
     have b_in' : b ∈ stable_voting prof':= 
       by simpa [stable_voting, h_erase_card y q_in.2] using hq.1,
     exact (finset.mem_erase.1 (mem_cands_of_mem_sv b_in')).1, },
@@ -362,7 +360,7 @@ begin
     set prof' : election_profile χ υ := 
     ⟨(prof.cands.erase x), 
      (by rw [h_erase_card x p_in.2, m_succ]; exact nat.zero_lt_succ d), 
-     prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+     prof.voters, prof.Q⟩ with h_prof', 
     have a_in' : a ∈ stable_voting prof':= 
       by simpa [stable_voting, h_erase_card x p_in.2] using hp.1,
     exact (finset.mem_erase.1 (mem_cands_of_mem_sv a_in')).1, },  
@@ -431,7 +429,7 @@ begin
       set prof' : election_profile χ υ := 
         ⟨(prof.cands.erase x), 
          (by rw [h_erase_card x p_in.2, m_succ]; exact nat.zero_lt_succ d), 
-         prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+         prof.voters, prof.Q⟩ with h_prof', 
       suffices : a ∈ stable_voting_alt prof',
       { simp only [stable_voting_alt, h_erase_card x p_in.right] at this,
         exact this, },

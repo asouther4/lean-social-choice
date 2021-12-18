@@ -436,7 +436,6 @@ begin
       simp only [x_in', dif_pos] at ⊢ hp,
       set prof' : election_profile χ υ := 
         ⟨(prof.cands.erase x), 
-         (by rw [h_erase_card x p_in.2, m_succ]; exact nat.zero_lt_succ d), 
          prof.voters, prof.Q⟩ with h_prof', 
       suffices : a ∈ stable_voting_alt prof',
       { simp only [stable_voting_alt, h_erase_card x p_in.right] at this,
@@ -451,6 +450,6 @@ begin
   { sorry, },
 end 
 
---def is_stable {χ υ : Type*} (M : election_profile χ υ → finset χ) 
---  (prof : election_profile χ υ) [∀ v, decidable_rel (prof.Q v)] (a: χ) : Prop :=
---true
+def is_stable {χ υ : Type*} (M : election_profile χ υ → finset χ) 
+  (prof : election_profile χ υ) [∀ v, decidable_rel (prof.Q v)] (a: χ) : Prop :=
+true

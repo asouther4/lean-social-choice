@@ -36,10 +36,10 @@ def best_margin {χ υ : Type*} (voters : finset υ) (s : finset (χ × χ)) (Q 
     then s.sup' hn (λ p, margin voters Q p.1 p.2) 
   else 0
 
-def uniquely_weighted {χ υ : Type*} -- 
+def uniquely_weighted {χ υ : Type*} 
   (voters : finset υ) (cands : finset χ) (Q : υ → χ → χ → Prop) 
   [∀ v, decidable_rel (Q v)] : Prop := 
-∀ a b a' b' ∈ cands, a ≠ b → a' ≠ b' → ((a ≠ a' ) ∨ (b ≠ b')) → 
+∀ a b a' b' ∈ cands, a ≠ b → a' ≠ b' → (a ≠ a' ∨ b ≠ b') → 
 margin voters Q a b ≠ margin voters Q a' b'
 
 open_locale classical
@@ -281,37 +281,171 @@ begin
   cases n with d, 
   { intros prof hn,
     linarith [hn, prof.cpos], },
-  --simp only [stable_voting],
   induction d with d IH,
   { intros prof hn a a_in y y_in,
     rw finset.card_le_one.1 (le_of_eq hn) 
       a (mem_cands_of_mem_sv a_in) y y_in,
     exact defeat_irreflexive prof.voters prof.cands prof.Q y },
   intros prof cands_card a a_in,
-  have card_eq_d : prof.cands.card = d + 2 := by rw cands_card,
-  simp only [stable_voting, stable_voting', card_eq_d, exists_prop, 
+  simp only [stable_voting, stable_voting', cands_card, exists_prop, 
     exists_and_distrib_right, exists_eq_right, finset.mem_image,
     finset.mem_filter, finset.filter_congr_decidable, prod.exists, 
     finset.mem_product] at a_in, 
   rcases a_in with ⟨x,⟨⟨p_in,hp⟩,ha⟩⟩,
-  have p_in' : (a,x).snd ∈ prof.cands := 
-   by simp only; exact p_in.2,
+  have p_in' : (a,x).snd ∈ prof.cands := by simp only; exact p_in.2,
   rw dif_pos p_in' at hp,
-  intros b b_in,
-  by_cases hbx : b = x, { rw hbx, exact hp.2 },
-  have h_erase_card : ∀ z ∈ prof.cands, finset.card (prof.cands.erase z) = d.succ,
-  { intros z  z_in,
-    rw finset.card_erase_of_mem z_in,
-    exact nat.pred_eq_of_eq_succ cands_card, },
+  have h_erase_card : (prof.cands.erase x).card = d.succ := 
+    by simpa [finset.card_erase_of_mem p_in.2] using nat.pred_eq_of_eq_succ cands_card,
   set prof' : election_profile χ υ := 
     ⟨(prof.cands.erase x), 
-     (by rw (h_erase_card x p_in.2); exact nat.zero_lt_succ d), 
+     (by rw h_erase_card; exact nat.zero_lt_succ d), 
      prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
   have a_in' : a ∈ stable_voting prof',
-  { simp only [stable_voting], convert hp.1, exact h_erase_card x p_in.2 },
-  suffices : ¬defeats prof'.voters prof'.cands prof'.Q b a,
-  { sorry, },
-  sorry, 
-  have := (IH prof' (by convert h_erase_card x p_in.2) a a_in') b,
-
+  { simp only [stable_voting], convert hp.1 },
+  refine undefeated_erase _ hp.2,
+  simpa using (IH prof' (by convert h_erase_card) a a_in'),
 end
+
+lemma sv_winner_undefeated {χ υ : Type*} {prof : election_profile χ υ} :
+  ∀ a ∈ stable_voting prof, is_undefeated prof.voters prof.cands prof.Q a :=
+sv_winner_undefeated' prof.cands.card prof rfl
+
+lemma sv_winner_unique' {χ υ : Type*} :
+  ∀ (n : ℕ) (prof : election_profile χ υ), prof.cands.card = n → 
+  uniquely_weighted prof.voters prof.cands prof.Q → 
+  (stable_voting prof).card = 1 :=
+begin
+  intro n,
+  cases n with d, 
+  { intros prof hn,
+    linarith [hn, prof.cpos], },
+  induction d with d IH,
+  { intros prof hn _,
+    rwa sv_singleton prof hn, },
+  set m := d.succ with m_succ,
+  intros prof hm h_uniq,
+  have card_eq_d : prof.cands.card = d + 2 := by rw hm,
+  by_contradiction h_card,
+  have hab : ∃ a b ∈ (stable_voting prof), a ≠ b,
+  { obtain ⟨a, a_in⟩ := exists_sv_winner prof,
+    suffices : 2 ≤ (stable_voting prof).card,
+    { obtain ⟨b, b_in, hb⟩ := finset.exists_second_distinct_mem this a_in,
+      use ⟨a, b, a_in, b_in, hb.symm⟩, },
+    exact ge_two_of_ne_zero_ne_one 
+      (ne_of_gt (finset.card_pos.2 (exists_sv_winner prof))) h_card, },
+  rcases hab with ⟨a, b, a_in, b_in, a_neq_b⟩,
+  simp only [stable_voting, stable_voting', 
+    card_eq_d, exists_prop, exists_and_distrib_right, exists_eq_right,
+    finset.mem_image, finset.mem_filter, finset.filter_congr_decidable, 
+    prod.exists, finset.mem_product] at a_in b_in,
+  rcases a_in with ⟨x,⟨⟨p_in,hp⟩,ha⟩⟩, rcases b_in with ⟨y,⟨⟨q_in,hq⟩,hb⟩⟩,
+  rw ← ha at hb,
+  have h_erase_card : ∀ z ∈ prof.cands, finset.card (prof.cands.erase z) = m,
+  { intros z  z_in,
+    rw finset.card_erase_of_mem z_in,
+    exact nat.pred_eq_of_eq_succ hm, },
+  suffices : b ≠ y ∧ a ≠ x, 
+  { exact (h_uniq b y a x q_in.1 q_in.2 p_in.1 p_in.2 this.1 this.2 
+      (or.inl a_neq_b.symm)) hb },
+  split,
+  { have y_in' : (b, y).snd ∈ prof.cands := by simp only; exact q_in.2,
+    rw dif_pos y_in' at hq,
+    set prof' : election_profile χ υ := 
+    ⟨(prof.cands.erase y), 
+     (by rw [h_erase_card y q_in.2, m_succ]; exact nat.zero_lt_succ d), 
+     prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+    have b_in' : b ∈ stable_voting prof':= 
+      by simpa [stable_voting, h_erase_card y q_in.2] using hq.1,
+    exact (finset.mem_erase.1 (mem_cands_of_mem_sv b_in')).1, },
+  { have x_in' : (a, x).snd ∈ prof.cands := by simp only; exact p_in.2,
+    rw dif_pos x_in' at hp,
+    set prof' : election_profile χ υ := 
+    ⟨(prof.cands.erase x), 
+     (by rw [h_erase_card x p_in.2, m_succ]; exact nat.zero_lt_succ d), 
+     prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+    have a_in' : a ∈ stable_voting prof':= 
+      by simpa [stable_voting, h_erase_card x p_in.2] using hp.1,
+    exact (finset.mem_erase.1 (mem_cands_of_mem_sv a_in')).1, },  
+end
+
+lemma sv_winner_unique {χ υ : Type*} (prof : election_profile χ υ) 
+  (h : uniquely_weighted prof.voters prof.cands prof.Q) :
+  (stable_voting prof).card = 1 :=
+sv_winner_unique' prof.cands.card prof rfl h
+
+noncomputable def stable_voting_alt' {χ υ : Type*} (voters : finset υ) (Q : υ → χ → χ → Prop) :
+  Π (n : ℕ) (cands : finset χ) (hn : cands.card = n) (cpos : 0 < n), finset χ
+| 0 _ _ cpos := (nat.not_lt_zero _ cpos).elim
+| 1 cands _ _ := cands
+| (n+2) cands hn cpos :=
+let
+  -- whether c wins when candidate rem is removed
+  still_wins (c rem : χ) : Prop :=
+    if rem_prop : rem ∈ cands 
+      then c ∈ stable_voting_alt' (n+1) (cands.erase rem)
+          (by { rw [finset.card_erase_of_mem, hn]; simp [rem_prop], })
+          (by omega)
+    else false,
+  viable : finset (χ × χ) := (cands.product cands).filter 
+      (λ p, still_wins p.1 p.2 ∧ is_undefeated voters cands Q p.1)
+in finset.image prod.fst $ viable.filter (λ p, (margin voters Q p.1 p.2 = best_margin voters viable Q))
+
+noncomputable def stable_voting_alt {χ υ : Type*} (prof : election_profile χ υ)
+  [decidable_eq χ] [∀ v, decidable_rel (prof.Q v)] : finset χ :=
+stable_voting_alt' prof.voters prof.Q prof.cands.card prof.cands rfl prof.cpos
+
+lemma sv_alt_singleton {χ υ : Type*} (prof : election_profile χ υ) (hcands : prof.cands.card = 1) : 
+  stable_voting_alt prof = prof.cands :=
+by simp only [stable_voting_alt, stable_voting_alt', hcands]
+
+/-
+lemma stable_voting_eq_stable_voting_alt' {χ υ : Type*} :
+  ∀ (n : ℕ) (prof : election_profile χ υ), prof.cands.card = n →
+  stable_voting prof = stable_voting_alt prof := 
+begin
+  intro n,
+  cases n with d, 
+  { intros prof hn, exfalso,
+    linarith [hn, prof.cpos], },
+  induction d with d IH,
+  { intros prof hn,
+    rwa [sv_singleton prof hn, sv_alt_singleton prof hn], },
+  set m := d.succ with m_succ,
+  intros prof hm,
+  have card_eq_d : prof.cands.card = d + 2 := by rw hm,
+  have h_erase_card : ∀ z ∈ prof.cands, finset.card (prof.cands.erase z) = m,
+  { intros z  z_in,
+    rw finset.card_erase_of_mem z_in,
+    exact nat.pred_eq_of_eq_succ hm, },
+  ext a, split,
+  { intro a_in,
+    have a_undefeated := sv_winner_undefeated a a_in,
+    simp only [stable_voting, stable_voting', stable_voting_alt, 
+      stable_voting_alt', card_eq_d, finset.filter_congr_decidable,
+      exists_prop, exists_and_distrib_right, exists_eq_right, 
+      finset.mem_image, finset.mem_filter, prod.exists, finset.mem_product] at ⊢ a_in,
+    rcases a_in with ⟨x,⟨⟨p_in,hp⟩,ha⟩⟩,
+    refine ⟨x,⟨⟨p_in,⟨_,a_undefeated⟩⟩,_⟩⟩,
+    { have x_in' : (a, x).snd ∈ prof.cands := by simp only; exact p_in.2,
+      simp only [x_in', dif_pos] at ⊢ hp,
+      set prof' : election_profile χ υ := 
+        ⟨(prof.cands.erase x), 
+         (by rw [h_erase_card x p_in.2, m_succ]; exact nat.zero_lt_succ d), 
+         prof.voters, prof.vpos, prof.Q⟩ with h_prof', 
+      suffices : a ∈ stable_voting_alt prof',
+      { simp only [stable_voting_alt, h_erase_card x p_in.right] at this,
+        exact this, },
+      have prof'_card : prof'.cands.card = m 
+        := by simp only [h_erase_card x p_in.2],
+      simpa only [← IH prof' prof'_card, 
+        stable_voting, h_erase_card x p_in.2] using hp.1, },
+    { convert ha, ext p,
+      simp only [eq_self_iff_true] at *,
+      sorry, }, },
+  { sorry, },
+end
+
+def is_stable {χ υ : Type*} (M : election_profile χ υ → finset χ) 
+  (prof : election_profile χ υ)  [∀ v, decidable_rel (prof.Q v)] (a: χ) : Prop :=
+true
+-/

@@ -40,14 +40,14 @@ def margin_pos {χ υ : Type*} (voters : finset υ) (Q : υ → χ → χ → Pr
 def defeats {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
   [∀ v, decidable_rel (Q v)] [decidable_eq χ] --[∀ k : list χ, decidable (k ≠ list.nil)] 
   (x y: χ) := 
-0 < margin voters Q x y ∧ ¬ (∃ l : list χ, (∀ c ∈ l, c ∈ cands) ∧ x ∈ l ∧ y ∈ l ∧
+margin_pos voters Q x y ∧ ¬ (∃ l : list χ, (∀ c ∈ l, c ∈ cands) ∧ x ∈ l ∧ y ∈ l ∧
     is_cycle' (λ a b, margin voters Q x y ≤ margin voters Q a b) l)
 
 def is_undefeated {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
   (x : χ) [∀ v, decidable_rel (Q v)] [decidable_eq χ] := 
   ∀ y ∈ cands, ¬ defeats voters cands Q y x
 
-/------- Lemmas -------/
+open_locale classical
 
 lemma succ_pred {i : ℕ} (e : 0 < i) : i - 1 + 1 = i := by omega
 
@@ -230,13 +230,29 @@ lemma defeat_irreflexive {χ υ : Type*} (voters : finset υ) (cands: finset χ)
   irreflexive (defeats voters cands Q) := 
 begin
     intros a ha,
-    simp only [defeats, margin, lt_self_iff_false, sub_self, false_and] at ha,
+    simp only [defeats, margin, lt_self_iff_false, sub_self, false_and, margin_pos] at ha,
     exact ha,
 end
 
+lemma not_margin_pos_reverse {χ υ : Type*} {voters : finset υ} {Q : υ → χ → χ → Prop} {a b : χ} 
+  (h : margin_pos voters Q a b) : 
+  ¬ margin_pos voters Q b a := 
+begin
+  simp only [margin_pos, margin, sub_pos, not_lt, int.coe_nat_lt] at *,
+  exact le_of_lt h,
+end
+
+lemma not_defeat_of_margin_pos {χ υ : Type*} {voters : finset υ} {Q : υ → χ → χ → Prop} {a b : χ}
+  (cands : finset χ) (h : margin_pos voters Q a b) :
+    ¬ defeats voters cands Q b a := 
+begin
+  simp only [defeats, not_and'] at ⊢ h,
+  rintros -,
+  exact not_margin_pos_reverse h,
+end
+
 lemma undefeated_erase {χ υ : Type*} {voters : finset υ} {cands: finset χ} {Q : υ → χ → χ → Prop}
-  {a b : χ} [decidable_eq χ] [∀ v, decidable_rel (Q v)] 
-  (ha : is_undefeated voters (cands.erase b) Q a) (hb : ¬ defeats voters cands Q b a) :
+  {a b : χ} (ha : is_undefeated voters (cands.erase b) Q a) (hb : ¬ defeats voters cands Q b a) :
   is_undefeated voters cands Q a :=
 begin
   intros y y_in,

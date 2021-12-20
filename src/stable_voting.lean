@@ -1,13 +1,45 @@
-import for_mathlib
 import split_cycle
-import data.list.basic
-
-variables {χ υ : Type*}
 
 structure election_profile (χ υ : Type*) :=
 (cands : finset χ)
 (voters : finset υ)
 (Q : υ → χ → χ → Prop)
+
+variables {χ υ : Type*}
+
+def profile_without (prof: election_profile χ υ) (b : χ) 
+  [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] : election_profile χ υ :=
+  ⟨prof.cands.erase b, prof.voters, prof.Q⟩
+
+lemma mem_prof_of_mem_profile_without {a b: χ} {prof : election_profile χ υ}
+  [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] (h : a ∈ (profile_without prof b).cands) : 
+  a ∈ prof.cands :=
+by simp only [profile_without, ne.def, finset.mem_erase] at h; exact h.2
+
+lemma voters_eq_profile_without (prof : election_profile χ υ) (b: χ)
+  [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] : 
+  (profile_without prof b).voters = prof.voters := by simp only [profile_without]
+
+lemma Q_eq_profile_without (prof : election_profile χ υ) (b: χ)
+  [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] : 
+  (profile_without prof b).Q = prof.Q := by simp only [profile_without]
+
+lemma cands_erase_eq_profile_without (prof : election_profile χ υ) (b: χ)
+  [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] : 
+  (profile_without prof b).cands = prof.cands.erase b := by simp only [profile_without]
+
+lemma profile_without_card {b: χ} (prof : election_profile χ υ) (b_in : b ∈ prof.cands)
+  [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] :
+  prof.cands.card.pred = (profile_without prof b).cands.card := 
+by rw [cands_erase_eq_profile_without prof b, finset.card_erase_of_mem b_in]
+
+lemma profile_without_card' {b: χ} (prof : election_profile χ υ) (b_in : b ∈ prof.cands)
+  [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] :
+  prof.cands.card = (profile_without prof b).cands.card.succ :=
+begin
+  rw ← profile_without_card prof b_in,
+  exact (nat.succ_pred_eq_of_pos (finset.card_pos.2 ⟨b, b_in⟩)).symm,
+end
 
 lemma restrict_of_subset {q : χ → χ → Prop} {s t : finset χ} {a b : χ}
   (hst : s ⊆ t) (hq : (restrict q s) a b) : (restrict q t) a b := 
@@ -67,7 +99,7 @@ lemma sv_empty (prof : election_profile χ υ) (hcands : prof.cands.card = 0) :
 
 lemma sv_singleton (prof : election_profile χ υ) (hcands : prof.cands.card = 1) : 
   stable_voting prof = prof.cands :=
-by simp only [stable_voting, stable_voting', hcands]
+by simp only [stable_voting, stable_voting', hcands] 
 
 lemma exists_best_margin {s : finset (χ × χ)} (voters : finset υ) (Q : υ → χ → χ → Prop) 
   (hs : s.nonempty) :
@@ -79,6 +111,15 @@ begin
   simp only [hs, dif_pos],
   exact ⟨b, b_in, hb.symm⟩, 
 end 
+
+lemma best_margin_pos_of_exists_pos  {s : finset (χ × χ)} {voters : finset υ} {Q : υ → χ → χ → Prop}
+  (p : χ × χ) (p_in : p ∈ s) (h : margin_pos voters Q p.1 p.2) : 
+  0 < best_margin voters s Q :=
+begin
+  have s_nonempty : s.nonempty := ⟨p, p_in⟩,
+  simp only [best_margin, dif_pos, s_nonempty, finset.lt_sup'_iff],
+  exact ⟨p, p_in, h⟩,
+end
 
 section trans_gen
 
@@ -451,12 +492,53 @@ end
 
 def is_stable (M : election_profile χ υ → finset χ) 
   (prof : election_profile χ υ) [∀ v, decidable_rel (prof.Q v)] (a: χ) : Prop :=
-let prof_without (b : χ) : election_profile χ υ := 
-  ⟨prof.cands.erase b, prof.voters, prof.Q⟩ in
-∃ b ∈ prof.cands, margin_pos prof.voters prof.Q a b ∧ a ∈ M (prof_without b)
+∃ b ∈ prof.cands, margin_pos prof.voters prof.Q a b ∧ a ∈ M (profile_without prof b)
 
-def is_stable_for_winners_wt (M : election_profile χ υ → finset χ) : Prop :=
-∀ (prof: election_profile χ υ) [∀ v, decidable_rel (prof.Q v)],
+def is_stable_for_winners (M : election_profile χ υ → finset χ) : Prop :=
+∀ (prof: election_profile χ υ),
 (∃ x, is_stable M prof x) → ∀ a ∈ (M prof), is_stable M prof a
 
---theorem sv_stable_for_winners_wt : is_stable_for_winners_wt stable_voting :=
+theorem sv_stable_for_winners : 
+  is_stable_for_winners (stable_voting : election_profile χ υ → finset χ) := 
+begin
+  rintros prof ⟨x, ⟨y, y_in, hy₁, hy₂⟩⟩ a a_in',
+  have x_in : x ∈ prof.cands := 
+    mem_prof_of_mem_profile_without (mem_cands_of_mem_sv hy₂), 
+  obtain ⟨d, hd⟩ : ∃ d : ℕ, prof.cands.card = d + 2,
+  { use (profile_without prof y).cands.card.pred,
+    rw [profile_without_card' prof y_in, ← nat.pred_eq_succ_iff, nat.pred_succ],
+    refine (nat.succ_pred_eq_of_pos _).symm,
+    rw finset.card_pos,
+    exact ⟨x, mem_cands_of_mem_sv hy₂⟩, },
+  have h_erase_card : ∀ z ∈ prof.cands, finset.card (prof.cands.erase z) = d.succ,
+  { intros z  z_in,
+    rw finset.card_erase_of_mem z_in,
+    exact nat.pred_eq_of_eq_succ hd, },
+  let still_wins : χ → χ → Prop := λ x₁ x₂,
+    if x₂_in : x₂ ∈ prof.cands 
+      then x₁ ∈ stable_voting' prof.voters prof.Q d.succ 
+          (prof.cands.erase x₂)
+          (by rwa h_erase_card x₂ x₂_in)
+    else false,
+  set viable_set : finset (χ × χ) := (prof.cands.product prof.cands).filter
+    (λ p, still_wins p.1 p.2 ∧ ¬ defeats prof.voters prof.cands prof.Q p.2 p.1) with hvs,
+  simp only [stable_voting, stable_voting', hd, exists_prop,
+    exists_and_distrib_right, exists_eq_right, finset.mem_image,
+    finset.mem_filter, finset.filter_congr_decidable, 
+    prod.exists, finset.mem_product] at a_in',
+  rcases a_in' with ⟨b,⟨⟨⟨a_in,b_in⟩,hp⟩,hb⟩⟩,
+  refine ⟨b, b_in, ⟨_,_⟩⟩,
+  { unfold margin_pos, rw hb,
+    refine best_margin_pos_of_exists_pos (x,y) _ (by convert hy₁),
+    have xy_in : (x,y).snd ∈ prof.cands := by simpa,
+    simp only [finset.mem_filter, finset.mem_product, 
+      dif_pos, xy_in, and_true, stable_voting, profile_without] at ⊢ hy₂,
+    refine ⟨x_in, _, not_defeat_of_margin_pos prof.cands hy₁,⟩,
+    convert hy₂, 
+    exact (h_erase_card y y_in).symm, },
+  { suffices : (a,b).snd ∈ prof.cands, 
+    { simp only [dif_pos, this, stable_voting] at hp ⊢,
+      convert hp.1 using 2,
+      rw [cands_erase_eq_profile_without prof b, h_erase_card b b_in], },
+    simpa, },
+end

@@ -490,16 +490,38 @@ begin
   { sorry, },
 end 
 
+class voting_method {χ υ : Type*} (M : election_profile χ υ → finset χ) : Prop :=
+(winners_subset : ∀ prof : election_profile χ υ, M prof ⊆ prof.cands)
+(winners_nonempty : ∀ prof : election_profile χ υ, prof.cands.nonempty → (M prof).nonempty)
+
+export voting_method (winners_subset winners_nonempty)
+
+lemma voting_method_singleton {prof : election_profile χ υ} {a : χ} 
+  (M : election_profile χ υ → finset χ) [voting_method M] (h : prof.cands = {a}) : 
+  M prof = {a} :=
+begin
+  have : M prof ⊆ prof.cands := voting_method.winners_subset prof,
+  rw [h, finset.subset_singleton_iff] at this,
+  cases this,
+  { exfalso, refine (voting_method.winners_nonempty prof _).ne_empty this,
+    simpa only [h] using finset.singleton_nonempty a, },
+  { exact this, },
+end
+
+instance : voting_method (stable_voting : election_profile χ υ → finset χ) := 
+⟨λ prof a a_in, mem_cands_of_mem_sv a_in, 
+ λ prof h, exists_sv_winner prof $ finset.card_pos.2 h⟩
+
 def is_stable (M : election_profile χ υ → finset χ) 
   (prof : election_profile χ υ) [∀ v, decidable_rel (prof.Q v)] (a: χ) : Prop :=
 ∃ b ∈ prof.cands, margin_pos prof.voters prof.Q a b ∧ a ∈ M (profile_without prof b)
 
-def is_stable_for_winners (M : election_profile χ υ → finset χ) : Prop :=
+def is_stable_for_winners_wt (M : election_profile χ υ → finset χ) : Prop :=  
 ∀ (prof: election_profile χ υ),
 (∃ x, is_stable M prof x) → ∀ a ∈ (M prof), is_stable M prof a
 
-theorem sv_stable_for_winners : 
-  is_stable_for_winners (stable_voting : election_profile χ υ → finset χ) := 
+theorem sv_stable_for_winners_wt : 
+  is_stable_for_winners_wt (stable_voting : election_profile χ υ → finset χ) := 
 begin
   rintros prof ⟨x, ⟨y, y_in, hy₁, hy₂⟩⟩ a a_in',
   have x_in : x ∈ prof.cands := 
@@ -541,4 +563,62 @@ begin
       convert hp.1 using 2,
       rw [cands_erase_eq_profile_without prof b, h_erase_card b b_in], },
     simpa, },
+end
+
+def condorcet_winner (prof : election_profile χ υ) (x : χ) : Prop := 
+x ∈ prof.cands ∧ ∀ y ∈ prof.cands, y ≠ x → margin_pos prof.voters prof.Q x y
+
+def condorcet_criterion (M : election_profile χ υ → finset χ) : Prop := 
+  ∀ (prof : election_profile χ υ) (x : χ), 
+    condorcet_winner prof x → M prof = {x}
+
+lemma condorcet_winner_profile_without {prof : election_profile χ υ} {x b : χ} 
+  (h : condorcet_winner prof x) (hb : x ≠ b): 
+  condorcet_winner (profile_without prof b) x := 
+⟨finset.mem_erase_of_ne_of_mem hb h.1, λ y y_in hxy, h.2 y (finset.mem_of_mem_erase y_in) hxy⟩
+
+lemma not_margin_pos_of_condorcet_winner {prof : election_profile χ υ} {x b: χ} 
+  (h : condorcet_winner prof x) (b_in : b ∈ prof.cands) : ¬ margin_pos prof.voters prof.Q b x :=
+begin
+  by_cases hb : b = x, 
+  { rw hb, exact not_margin_pos_self prof.voters prof.Q x },
+  { exact not_margin_pos_of_reverse (h.2 b b_in hb) }
+end
+
+theorem condorcet_of_stability_for_winners_wt (M : election_profile χ υ → finset χ) 
+  [hM : voting_method M] : is_stable_for_winners_wt M → condorcet_criterion M := 
+begin
+  intros h_stable p y hy,
+  suffices : ∀ (n : ℕ) (prof : election_profile χ υ) (x : χ), prof.cands.card = n →
+    condorcet_winner prof x → M prof = {x},
+  { exact this p.cands.card p y rfl hy, }, 
+  intro n, induction n with n IH,
+  { intros prof x h_card h_cond, exfalso,
+    exact (finset.card_ne_zero_of_mem h_cond.1) h_card, },
+  intros prof x h_card h_cond,
+  by_cases h_cands : prof.cands = {x}, { exact voting_method_singleton M h_cands, },
+  have hx₁ : ∀ a ∈ prof.cands, x ≠ a → M (profile_without prof a) = {x},
+  { intros a a_in hax, 
+    refine IH (profile_without prof a) x _ (condorcet_winner_profile_without h_cond hax),
+    rw ← profile_without_card prof a_in,
+    exact nat.pred_eq_of_eq_succ h_card, },
+  have hx₂ : ∀ a ∈ prof.cands, is_stable M prof a → a = x,
+  { rintros a a_in ⟨c, c_in, hc₁, hc₂⟩,
+    have x_ne_c : x ≠ c,
+    { by_contra h, rw ← h at hc₁,
+      exact (not_margin_pos_of_condorcet_winner h_cond a_in) hc₁ },
+    rwa [← finset.mem_singleton, ← hx₁ c c_in x_ne_c] },
+  have hx₃ : is_stable M prof x,
+  { obtain ⟨b, b_in, hb⟩ := 
+      finset.exists_distinct_mem_of_ne_singleton ⟨x, h_cond.1⟩ h_cands,
+    refine ⟨b,b_in, h_cond.2 b b_in hb, _⟩,
+    simp only [hx₁ b b_in hb.symm, finset.mem_singleton], },
+  have hx₄ : ∀ a ∈ M prof, a = x,
+  { intros c c_in,
+    exact hx₂ c (voting_method.winners_subset prof c_in) (h_stable prof ⟨x, hx₃⟩ c c_in), },
+  rw finset.eq_singleton_iff_unique_mem,
+  refine ⟨_, hx₄⟩, 
+  obtain ⟨z, hz⟩ : (M prof).nonempty := 
+    voting_method.winners_nonempty prof (finset.card_pos.1 (by omega)),
+  rwa ← hx₄ z hz,  
 end

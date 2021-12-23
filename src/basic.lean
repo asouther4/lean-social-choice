@@ -9,6 +9,15 @@ variables {α : Type*} {s : finset α} {a b : α}
 
 namespace finset
 
+lemma exists_distinct_mem_of_ne_singleton (hs₁ : s.nonempty) (hs₂ : s ≠ {a}) :
+  ∃ b ∈ s, b ≠ a := 
+begin
+  by_contra h, push_neg at h,
+  apply hs₂,
+  rw eq_singleton_iff_nonempty_unique_mem,
+  exact ⟨hs₁, h⟩,
+end
+
 lemma exists_second_distinct_mem (hs : 2 ≤ s.card) (ha : a ∈ s) :
   ∃ b ∈ s, b ≠ a :=
 begin

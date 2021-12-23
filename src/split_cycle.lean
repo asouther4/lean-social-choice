@@ -38,8 +38,7 @@ def margin_pos {χ υ : Type*} (voters : finset υ) (Q : υ → χ → χ → Pr
   [∀ v, decidable_rel (Q v)] (c c' : χ) : Prop :=  0 < margin voters Q c c'
 
 def defeats {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
-  [∀ v, decidable_rel (Q v)] [decidable_eq χ] --[∀ k : list χ, decidable (k ≠ list.nil)] 
-  (x y: χ) := 
+  [∀ v, decidable_rel (Q v)] [decidable_eq χ] (x y: χ) := 
 margin_pos voters Q x y ∧ ¬ (∃ l : list χ, (∀ c ∈ l, c ∈ cands) ∧ x ∈ l ∧ y ∈ l ∧
     is_cycle' (λ a b, margin voters Q x y ≤ margin voters Q a b) l)
 
@@ -96,7 +95,7 @@ begin
 end
 
 lemma dominates_of_cycle  {χ : Type*} {l : list χ} {P : χ → χ → Prop} 
-  (hl : is_cycle' P l) [decidable_eq χ] : ∀ x ∈ l, ∃ y ∈ l, P x y :=
+  (hl : is_cycle' P l) : ∀ x ∈ l, ∃ y ∈ l, P x y :=
 begin
     intros x x_in,
     let i := l.index_of x,
@@ -110,8 +109,7 @@ begin
     exact d,
 end
 
-lemma mem_of_is_cycle'_restrict {χ : Type*} [decidable_eq χ] 
-  {P : χ → χ → Prop} {l : list χ} {s : finset χ} {a : χ} 
+lemma mem_of_is_cycle'_restrict {χ : Type*} {P : χ → χ → Prop} {l : list χ} {s : finset χ} {a : χ} 
   (a_in : a ∈ l) (hl : is_cycle' (restrict P s) l) :
   a ∈ s :=
 begin
@@ -133,8 +131,7 @@ begin
   exact ⟨l, hl₁, hl₂⟩,
 end
 
-lemma not_acyclical_in'_of_cyclical'_restrict {χ : Type*} [decidable_eq χ]
-  {q : χ → χ → Prop} {s : finset χ} 
+lemma not_acyclical_in'_of_cyclical'_restrict {χ : Type*} {q : χ → χ → Prop} {s : finset χ} 
   (h : cyclical' (restrict q s)) : ¬ acyclical_in' q s :=
 begin
   rcases h with ⟨l, hl⟩,
@@ -154,8 +151,7 @@ begin
 end
 
 lemma split_cycle_to_margin_cycle {χ υ : Type*} 
-  (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) (c : list χ)
-  [∀ v, decidable_rel (Q v)] [decidable_eq χ] /-[∀ k : list χ, decidable (k ≠ list.nil)]-/ : 
+  (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) (c : list χ) : 
   is_cycle' (defeats voters cands Q) c → is_cycle' (margin_pos voters Q) c :=
 begin
     intro chain,
@@ -170,8 +166,7 @@ begin
     exact chain,
 end
 
-theorem defeat_acyclical_in' {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
-  [decidable_eq χ] [∀ v, decidable_rel (Q v)] :
+theorem defeat_acyclical_in' {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) : 
   acyclical_in' (defeats voters cands Q) cands :=
 begin
   rintros c hcs ⟨c_ne_nil, hc⟩,
@@ -225,8 +220,7 @@ begin
     exact mini_req },
 end 
 
-lemma defeat_irreflexive {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) 
-  [decidable_eq χ] [∀ v, decidable_rel (Q v)] :
+lemma defeat_irreflexive {χ υ : Type*} (voters : finset υ) (cands: finset χ) (Q : υ → χ → χ → Prop) :
   irreflexive (defeats voters cands Q) := 
 begin
     intros a ha,
@@ -234,13 +228,17 @@ begin
     exact ha,
 end
 
-lemma not_margin_pos_reverse {χ υ : Type*} {voters : finset υ} {Q : υ → χ → χ → Prop} {a b : χ} 
-  (h : margin_pos voters Q a b) : 
-  ¬ margin_pos voters Q b a := 
+lemma not_margin_pos_of_reverse {χ υ : Type*} {voters : finset υ} {Q : υ → χ → χ → Prop} {a b : χ} 
+  (h : margin_pos voters Q a b) :  ¬ margin_pos voters Q b a := 
 begin
   simp only [margin_pos, margin, sub_pos, not_lt, int.coe_nat_lt] at *,
   exact le_of_lt h,
 end
+
+lemma not_margin_pos_self {χ υ : Type*} (voters : finset υ) (Q : υ → χ → χ → Prop) (a : χ) : 
+  ¬ margin_pos voters Q a a := 
+by simp only [margin_pos, margin, lt_self_iff_false, not_false_iff, sub_self]
+
 
 lemma not_defeat_of_margin_pos {χ υ : Type*} {voters : finset υ} {Q : υ → χ → χ → Prop} {a b : χ}
   (cands : finset χ) (h : margin_pos voters Q a b) :
@@ -248,7 +246,7 @@ lemma not_defeat_of_margin_pos {χ υ : Type*} {voters : finset υ} {Q : υ → 
 begin
   simp only [defeats, not_and'] at ⊢ h,
   rintros -,
-  exact not_margin_pos_reverse h,
+  exact not_margin_pos_of_reverse h,
 end
 
 lemma undefeated_erase {χ υ : Type*} {voters : finset υ} {cands: finset χ} {Q : υ → χ → χ → Prop}

@@ -28,6 +28,25 @@ lemma cands_erase_eq_profile_without (prof : election_profile χ υ) (b: χ)
   [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] : 
   (profile_without prof b).cands = prof.cands.erase b := by simp only [profile_without]
 
+lemma profile_without_eq_cands_of_not_mem {b : χ} {prof : election_profile χ υ}
+  [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] (hb : b ∉ prof.cands) : 
+  (profile_without prof b) = prof :=
+begin
+  tactic.unfreeze_local_instances,
+  cases prof,
+  simp only [profile_without, and_true, eq_self_iff_true, 
+    finset.erase_eq_of_not_mem hb] at *,
+end
+
+lemma ne_of_mem_profile_without {a b : χ} {prof : election_profile χ υ}
+  [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] 
+  (h : a ∈ (profile_without prof b).cands ) : a ≠ b := 
+begin 
+  simp only [cands_erase_eq_profile_without prof b,
+     ne.def, finset.mem_erase] at h,
+  exact h.1,
+end
+
 lemma profile_without_card {b: χ} (prof : election_profile χ υ) (b_in : b ∈ prof.cands)
   [∀ v, decidable_rel (prof.Q v)] [decidable_eq χ] :
   prof.cands.card.pred = (profile_without prof b).cands.card := 
@@ -621,4 +640,104 @@ begin
   obtain ⟨z, hz⟩ : (M prof).nonempty := 
     voting_method.winners_nonempty prof (finset.card_pos.1 (by omega)),
   rwa ← hx₄ z hz,  
+end
+
+theorem sv_condorcet_criterion : 
+  condorcet_criterion (stable_voting : election_profile χ υ → finset χ) :=
+condorcet_of_stability_for_winners_wt stable_voting sv_stable_for_winners_wt 
+
+noncomputable def smith_set (prof: election_profile χ υ) : finset χ := 
+{ x ∈ prof.cands | ∀ y ∈ prof.cands,
+   relation.trans_gen (margin_nonneg prof.voters prof.Q) x y }
+
+def smith_criterion (M : election_profile χ υ → finset χ) : Prop := 
+∀ (prof : election_profile χ υ) (x : χ), x ∈ M prof → x ∈ smith_set prof
+
+lemma smith_set_subset (prof : election_profile χ υ) : smith_set prof ⊆ prof.cands :=
+begin
+  intros x x_in,
+  simp only [smith_set, finset.sep_def, finset.mem_filter] at x_in,
+  exact x_in.1,
+end
+
+lemma smith_set_singleton {prof : election_profile χ υ} {a : χ} (h : prof.cands = {a}) : 
+  smith_set prof = {a} := 
+begin
+  ext x, split,
+  { intro x_in,
+    simp only [smith_set, finset.sep_def, finset.mem_filter] at x_in,
+    rw h at x_in,
+    exact x_in.1, },
+  { simp only [smith_set, finset.sep_def, finset.mem_singleton, finset.mem_filter],
+    intro hx, split,
+    { rw [h,hx],
+      exact finset.mem_singleton_self a, },
+    { intros y y_in,
+      apply relation.trans_gen.single,
+      have hy : y = a := by rwa [h,finset.mem_singleton] at y_in,
+      rw [hx, hy],
+      exact margin_nonneg_self prof.voters prof.Q a} },
+end
+
+lemma smith_set_of_profile_without_not_condorcet {prof : election_profile χ υ} {a b : χ}
+  (ha : a ∈ smith_set (profile_without prof b)) (hb : ¬ condorcet_winner prof b) :
+  a ∈ smith_set prof := 
+begin
+  by_cases b_in : b ∉ prof.cands, { rwa profile_without_eq_cands_of_not_mem b_in at ha, }, 
+  simp only [condorcet_winner, exists_prop, not_and, ne.def, not_forall, not_not] at b_in hb,
+  obtain ⟨x, x_in, hx₁, hx₂⟩ := hb b_in,
+  rw ← margin_nonneg_iff_not_margin_pos prof.voters prof.Q x at hx₂,
+  simp only [smith_set, finset.sep_def, finset.mem_filter, 
+    voters_eq_profile_without prof b, Q_eq_profile_without prof b] at ha ⊢,
+  refine ⟨finset.mem_of_mem_erase ha.1, _⟩,
+  intros y y_in,
+  by_cases hyb : y = b,
+  { rw ← hyb at hx₂,
+    refine relation.trans_gen.tail (ha.2 x _) hx₂,
+    rw [cands_erase_eq_profile_without prof b, finset.mem_erase],
+    exact ⟨hx₁, x_in⟩, },
+  { apply ha.2 y,
+    rw [cands_erase_eq_profile_without prof b, finset.mem_erase],
+    exact ⟨hyb, y_in⟩, },
+end
+
+theorem sv_smith_criterion : 
+  smith_criterion (stable_voting : election_profile χ υ → finset χ) :=
+begin
+  intros p z hz,
+  suffices : ∀ (n : ℕ) (prof : election_profile χ υ) (x : χ), prof.cands.card = n →
+    x ∈ stable_voting prof → x ∈ smith_set prof,
+  { exact this p.cands.card p z rfl hz },
+  intro n,
+  cases n with d, 
+  { intros prof x h_card x_in', exfalso,
+    exact (finset.nonempty.ne_empty ⟨x,mem_cands_of_mem_sv x_in'⟩)
+      (finset.card_eq_zero.1 h_card), },
+  induction d with d IH,
+  { intros prof x h_card x_in',
+    obtain ⟨a, ha⟩ := finset.card_eq_one.1 h_card,
+    rw [sv_singleton prof h_card, ha] at x_in', 
+    rwa smith_set_singleton ha, },
+  set m := d.succ with m_succ,
+  intros prof x hm x_in,
+  have card_eq_d : prof.cands.card = d + 2 := by rw hm,
+  have h_erase_card : ∀ z ∈ prof.cands, finset.card (prof.cands.erase z) = m,
+  { intros z  z_in,
+    rw finset.card_erase_of_mem z_in,
+    exact nat.pred_eq_of_eq_succ hm, },
+  let x_in' := x_in,
+  simp only [stable_voting, stable_voting', card_eq_d, exists_prop, 
+    exists_and_distrib_right, exists_eq_right, finset.mem_image,
+    finset.mem_filter, finset.filter_congr_decidable, prod.exists, finset.mem_product] at x_in,
+  rcases x_in with ⟨b,⟨⟨⟨x_in,b_in⟩,hp⟩,hx⟩⟩,
+  have xb_in : (x,b).snd ∈ prof.cands := by simpa,
+  have x_prof_without : x ∈ stable_voting (profile_without prof b),
+  { simp only [stable_voting, profile_without, h_erase_card b b_in, dif_pos, xb_in] at hp ⊢,
+    exact hp.1, },
+  refine smith_set_of_profile_without_not_condorcet 
+    (IH (profile_without prof b) x _ x_prof_without) _,
+  { rw [cands_erase_eq_profile_without prof b, h_erase_card b b_in], },
+  { by_contra hb,
+    rw [sv_condorcet_criterion prof b hb, finset.mem_singleton] at x_in',
+    exact (ne_of_mem_profile_without (mem_cands_of_mem_sv x_prof_without)) x_in', },
 end
